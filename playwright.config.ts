@@ -13,14 +13,16 @@ export default defineConfig({
   projects: [
     {
       name: "phone",
-      // 390×844 is the design reference size (design/screens).
-      use: { ...devices["iPhone 13"], defaultBrowserType: "chromium", viewport: { width: 390, height: 844 } },
+      // 390×844 at 2x is the design reference (design/screens).
+      use: { ...devices["Desktop Chrome"], viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
     },
   ],
+  // A production build: steadier than the dev server for screenshots.
   webServer: {
-    command: `npm run dev -- --port ${PORT}`,
+    command: `npm run build && npm run start -- --port ${PORT}`,
+    env: { NEXT_PUBLIC_REVIEW_LINKS: "1" },
     url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    reuseExistingServer: false,
+    timeout: 240_000,
   },
 });
