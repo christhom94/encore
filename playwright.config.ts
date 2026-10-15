@@ -14,7 +14,13 @@ export default defineConfig({
     {
       name: "phone",
       // 390×844 at 2x is the design reference (design/screens).
-      use: { ...devices["Desktop Chrome"], viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2,
+        // Deep links in the screenshot tests open a card without a tap first.
+        launchOptions: { args: ["--autoplay-policy=no-user-gesture-required"] },
+      },
     },
   ],
   // A production build: steadier than the dev server for screenshots.

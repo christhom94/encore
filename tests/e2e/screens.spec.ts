@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { dragCard, seedBest, shoot } from "./helpers";
+import { dragCard, mockPreviews, seedBest, shoot } from "./helpers";
 
 // Screenshots of each screen at 390×844 @2x, named after design/screens.
 // Compare with: npm run screens:compare
 
 test.beforeEach(async ({ page }) => {
   await seedBest(page, 11);
+  await mockPreviews(page, "hang");
 });
 
 test("01 home", async ({ page }) => {
@@ -23,7 +24,6 @@ test("02 play", async ({ page }) => {
 test("03 swiping right", async ({ page }) => {
   await page.goto("/?screen=play&song=3");
   await expect(page.getByTestId("top-card")).toBeVisible();
-  await page.addStyleTag({ content: ".progress-fill { animation: none !important; }" });
   await dragCard(page, 130, { hold: true });
   await expect(page.getByRole("button", { name: "Higher" })).toHaveAttribute("data-armed", "true");
   await expect(page.getByRole("button", { name: "Lower" })).toHaveAttribute("data-dim", "true");

@@ -32,13 +32,21 @@ export function IconButton({ className, ...rest }: ComponentProps<"button">) {
 }
 
 /** Credit line. Required on every screen that shows play counts. */
-export function Footer({ text = "Counts from" }: { text?: string }) {
+export function Footer({ text = "Counts from", previews }: { text?: string; previews?: boolean }) {
   return (
     <div className="mt-auto pt-3 text-center text-[11px] font-semibold tracking-[.08em] text-muted uppercase">
       {text}{" "}
       <a className="underline" href="https://www.setlist.fm" target="_blank" rel="noopener noreferrer">
         setlist.fm
       </a>
+      {previews && (
+        <>
+          {" · Previews from "}
+          <a className="underline" href="https://www.deezer.com" target="_blank" rel="noopener noreferrer">
+            Deezer
+          </a>
+        </>
+      )}
     </div>
   );
 }

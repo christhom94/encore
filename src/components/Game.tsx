@@ -12,6 +12,7 @@ import { HomeScreen } from "./screens/HomeScreen";
 import { RevealScreen, verdictText } from "./screens/RevealScreen";
 import { Footer, Toast } from "./ui";
 import { SwipeDeck } from "./SwipeDeck";
+import { unlockAudio } from "./usePreviewAudio";
 
 interface GameProps {
   artist: Artist;
@@ -46,7 +47,18 @@ export function Game({ artist, deck }: GameProps) {
 
   const home = () => dispatch({ type: "home" });
   const onGuess = useCallback((dir: Direction) => dispatch({ type: "guess", dir }), []);
-  const onTogglePreview = useCallback(() => dispatch({ type: "togglePreview" }), []);
+  const onPreviewChange = useCallback((playing: boolean) => dispatch({ type: "setPreview", playing }), []);
+
+  // Browsers allow sound only after a gesture: unlock previews on the first tap or key press.
+  useEffect(() => {
+    const unlock = () => unlockAudio();
+    window.addEventListener("pointerdown", unlock, { once: true, capture: true });
+    window.addEventListener("keydown", unlock, { once: true, capture: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock, { capture: true });
+      window.removeEventListener("keydown", unlock, { capture: true });
+    };
+  }, []);
 
   const share = () => {
     const text = `I got a ${s.streak} song streak on Encore guessing ${artist.name}'s live setlists.`;
@@ -92,10 +104,10 @@ export function Game({ artist, deck }: GameProps) {
               card={card}
               next={s.deck[s.i + 1]}
               playing={s.playing}
-              onTogglePreview={onTogglePreview}
+              onPreviewChange={onPreviewChange}
               onGuess={onGuess}
             />
-            <Footer />
+            <Footer previews />
           </>
         )}
 

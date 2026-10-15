@@ -17,24 +17,41 @@ export function Meta({ className, children }: { className?: string; children: Re
   );
 }
 
-/** Preview control. Toggles state only until real audio arrives in Stage 3. */
-export function PreviewBar({ playing, onToggle }: { playing: boolean; onToggle: () => void }) {
+const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+interface PreviewBarProps {
+  playing: boolean;
+  /** False when the song has no Deezer preview. */
+  available: boolean;
+  /** 0 to 1, following the audio. */
+  progress: number;
+  /** Seconds left. */
+  remaining: number;
+  onToggle: () => void;
+}
+
+/** 30-second preview: play/pause, progress following the audio, time left. */
+export function PreviewBar({ playing, available, progress, remaining, onToggle }: PreviewBarProps) {
+  const on = playing && available;
   return (
     <div className="flex items-center gap-2.5 px-1">
       <button
         type="button"
         onClick={onToggle}
         onPointerDown={(e) => e.stopPropagation()}
-        aria-label={playing ? "Pause preview" : "Play preview"}
-        aria-pressed={playing}
-        className="flex size-10 shrink-0 items-center justify-center rounded-full border-0 bg-ink p-0 text-paper"
+        disabled={!available}
+        aria-label={!available ? "No preview for this song" : on ? "Pause preview" : "Play preview"}
+        aria-pressed={available ? on : undefined}
+        className="flex size-10 shrink-0 items-center justify-center rounded-full border-0 bg-ink p-0 text-paper disabled:opacity-35"
       >
-        {playing ? <PauseIcon /> : <PlayIcon size={14} />}
+        {on ? <PauseIcon /> : <PlayIcon size={14} />}
       </button>
       <div className="relative h-2 flex-1 overflow-hidden rounded-[4px] bg-tile" aria-hidden="true">
-        <i className="progress-fill" style={{ animationPlayState: playing ? "running" : "paused" }} />
+        <i className="progress-fill" style={{ width: `${progress * 100}%` }} data-testid="preview-progress" />
       </div>
-      <span className="text-[12px] font-bold">0:30</span>
+      <span className="text-[12px] font-bold tabular-nums">
+        {available ? clock(remaining) : "No preview"}
+      </span>
     </div>
   );
 }

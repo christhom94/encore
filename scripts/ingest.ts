@@ -1,11 +1,13 @@
 // Ingest play counts for one artist:
 //   npm run ingest -- "Metallica"
 //   npm run ingest -- --mbid 65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab
-// Options: --force (ignore the 7-day cache), --source stats|aggregate
+// Options: --force (ignore the 7-day cache and re-match Deezer), --source stats|aggregate,
+//          --skip-deezer (counts only)
 
 import "./env";
 import { parseArgs } from "node:util";
 import { getDb, migrateDb } from "@/db/client";
+import { ingestDeezer, MIN_PLAYS, type DeezerSummary } from "@/ingest/deezer";
 import { ingestCounts, type IngestSummary } from "@/ingest/ingest";
 import { getArtist, pickArtist, searchArtists } from "@/lib/setlistfm/api";
 import { countSource, songCountsFor } from "@/lib/setlistfm/source";
@@ -17,6 +19,7 @@ const { values, positionals } = parseArgs({
     mbid: { type: "string" },
     force: { type: "boolean", default: false },
     source: { type: "string" },
+    "skip-deezer": { type: "boolean", default: false },
   },
 });
 
@@ -79,6 +82,30 @@ async function main() {
     getSongCounts: songCountsFor(source, (msg) => process.stdout.write(`\r${msg}   `)),
   });
   print(summary);
+
+  if (values["skip-deezer"]) return;
+  console.log(`\nMatching songs on Deezer…`);
+  const dz = await ingestDeezer(getDb(), artist.mbid, {
+    force: values.force,
+    runId: summary.runId,
+    progress: (msg) => process.stdout.write(`\r${msg}   `),
+  });
+  printDeezer(dz);
+}
+
+function printDeezer(d: DeezerSummary) {
+  if (!d.deezerArtist) {
+    console.log(`\nNo matching artist on Deezer: songs keep the placeholder cover and default colour.`);
+    return;
+  }
+  console.log(`\nDeezer artist: ${d.deezerArtist.name} [${d.deezerArtist.id}]`);
+  console.log(`Matched ${d.matched} of ${d.considered} songs checked; ${d.albumsAdded} new albums.`);
+  for (const a of d.accents) console.log(`  ${(a.accent ?? "default").padEnd(8)} ${a.album}`);
+  console.log(
+    `\nUnmatched with ${MIN_PLAYS()}+ plays (${d.unmatched.length}): placeholder cover, default colour`,
+  );
+  for (const u of d.unmatched) console.log(`  ${fmt(u.count).padStart(6)}  ${u.name}`);
+  if (d.unmatchedRare) console.log(`  …plus ${d.unmatchedRare} songs with fewer than ${MIN_PLAYS()} plays.`);
 }
 
 main().catch((err) => {

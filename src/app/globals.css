@@ -167,12 +167,6 @@ body {
   width: 0;
   border-radius: 4px;
   background: var(--higher);
-  animation: progress 30s linear forwards;
-}
-@keyframes progress {
-  to {
-    width: 100%;
-  }
 }
 
 .choice {
@@ -217,9 +211,5 @@ body {
   .choice,
   .streak-chip {
     transition: none;
-  }
-  .progress-fill {
-    animation: none;
-    width: 30%;
   }
 }

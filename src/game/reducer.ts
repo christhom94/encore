@@ -21,7 +21,7 @@ export type GameAction =
   | { type: "guess"; dir: Direction }
   | { type: "advance" }
   | { type: "home" }
-  | { type: "togglePreview" }
+  | { type: "setPreview"; playing: boolean }
   | { type: "loadBest"; best: number }
   | { type: "restore"; state: Partial<GameState> };
 
@@ -74,8 +74,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "home":
       return { ...state, screen: "home" };
 
-    case "togglePreview":
-      return { ...state, playing: !state.playing };
+    case "setPreview":
+      return state.playing === action.playing ? state : { ...state, playing: action.playing };
 
     case "loadBest":
       return { ...state, best: Math.max(state.best, action.best) };

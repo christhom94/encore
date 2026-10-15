@@ -12,6 +12,7 @@ const card = (id: string, count: number, line: number): Card => ({
   rank: 1,
   cover: null,
   accent: null,
+  trackId: null,
 });
 
 // Truths: a = higher, b = lower, c = higher.
@@ -114,7 +115,7 @@ describe("gameReducer", () => {
   });
 
   it("toggles the preview and resets it to playing on the next card", () => {
-    let s = gameReducer(play(), { type: "togglePreview" });
+    let s = gameReducer(play(), { type: "setPreview", playing: false });
     expect(s.playing).toBe(false);
     s = run(s, { type: "guess", dir: "higher" }, { type: "advance" });
     expect(s.playing).toBe(true);

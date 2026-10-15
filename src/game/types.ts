@@ -18,6 +18,8 @@ export interface Card {
   cover: string | null;
   /** Album accent colour (hex) or null for the default red. */
   accent: string | null;
+  /** Deezer track for the 30-second preview, or null when unmatched. */
+  trackId: number | null;
 }
 
 export interface Artist {

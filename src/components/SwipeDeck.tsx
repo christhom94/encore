@@ -16,6 +16,7 @@ import { CoverArt } from "./Art";
 import { LeftIcon, RightIcon } from "./icons";
 import { albumLine, cardShell, LineBox, Meta, NextCard, PreviewBar, SongTitle } from "./SongCard";
 import { cn } from "./ui";
+import { usePreviewAudio } from "./usePreviewAudio";
 
 /** Horizontal drag (px) that commits a guess. */
 export const SWIPE_THRESHOLD = 90;
@@ -35,8 +36,9 @@ function armFor(x: number): Arm {
 interface SwipeDeckProps {
   card: Card;
   next?: Card;
+  /** Preview wanted (the player can pause it; it resets to on for each card). */
   playing: boolean;
-  onTogglePreview: () => void;
+  onPreviewChange: (playing: boolean) => void;
   onGuess: (dir: Direction) => void;
 }
 
@@ -45,7 +47,9 @@ interface SwipeDeckProps {
  * (rotating x/18 degrees), or use the buttons or arrow keys. Mount with
  * key={card.id} so each card starts centred.
  */
-export function SwipeDeck({ card, next, playing, onTogglePreview, onGuess }: SwipeDeckProps) {
+export function SwipeDeck({ card, next, playing, onPreviewChange, onGuess }: SwipeDeckProps) {
+  const preview = usePreviewAudio(card.trackId, playing, onPreviewChange);
+  const pausePreview = preview.pause;
   const reduce = useReducedMotion();
   const x = useMotionValue(0);
   const rotate = useTransform(x, (v) => (reduce ? 0 : v / 18));
@@ -71,6 +75,7 @@ export function SwipeDeck({ card, next, playing, onTogglePreview, onGuess }: Swi
     (dir: Direction) => {
       if (committed.current) return;
       committed.current = true;
+      pausePreview();
       if (reduce) {
         onGuess(dir);
         return;
@@ -79,7 +84,7 @@ export function SwipeDeck({ card, next, playing, onTogglePreview, onGuess }: Swi
         onGuess(dir),
       );
     },
-    [onGuess, reduce, x],
+    [onGuess, reduce, x, pausePreview],
   );
 
   useEffect(() => {
@@ -130,7 +135,13 @@ export function SwipeDeck({ card, next, playing, onTogglePreview, onGuess }: Swi
             <SongTitle title={card.title} />
             <Meta>{albumLine(card)}</Meta>
           </div>
-          <PreviewBar playing={playing} onToggle={onTogglePreview} />
+          <PreviewBar
+            playing={playing}
+            available={!!card.trackId && preview.status !== "error"}
+            progress={preview.progress}
+            remaining={preview.remaining}
+            onToggle={preview.toggle}
+          />
           <LineBox line={card.line} />
         </motion.div>
       </div>

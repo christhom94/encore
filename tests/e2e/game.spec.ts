@@ -1,9 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 import { SAMPLE_DECK } from "../../src/data/sample-deck";
 import { truthFor } from "../../src/game/reducer";
-import { dragCard } from "./helpers";
+import { dragCard, mockPreviews } from "./helpers";
 
 const truths = SAMPLE_DECK.map(truthFor);
+
+test.beforeEach(async ({ page }) => {
+  await mockPreviews(page, "silent");
+});
 type Input = "button" | "key" | "drag";
 
 async function guess(page: Page, dir: "higher" | "lower", input: Input) {
