@@ -1,36 +1,9 @@
 "use client";
 
+// 30-second Deezer previews, played through the shared element in src/lib/audio.ts.
+
 import { useCallback, useEffect, useRef, useState } from "react";
-
-// 30-second Deezer previews. One shared <audio> element for the whole app:
-// browsers only allow sound after a user gesture, and Safari unlocks per
-// element, so we "unlock" it once on the player's first tap and reuse it.
-
-const SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
-
-let shared: HTMLAudioElement | null = null;
-let unlocked = false;
-
-function audio(): HTMLAudioElement {
-  if (!shared) {
-    shared = new Audio();
-    shared.preload = "auto";
-  }
-  return shared;
-}
-
-/** Call from a tap or key press: lets later previews start without one. */
-export function unlockAudio() {
-  if (unlocked) return;
-  unlocked = true;
-  const a = audio();
-  if (a.src) return;
-  a.src = SILENT_WAV;
-  a.play().then(
-    () => a.pause(),
-    () => undefined,
-  );
-}
+import { previewElement as audio, unlockAudio } from "@/lib/audio";
 
 export type PreviewStatus = "none" | "loading" | "ready" | "error";
 

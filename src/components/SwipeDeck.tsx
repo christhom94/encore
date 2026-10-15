@@ -16,6 +16,8 @@ import { CoverArt } from "./Art";
 import { LeftIcon, RightIcon } from "./icons";
 import { albumLine, cardShell, LineBox, Meta, NextCard, PreviewBar, SongTitle } from "./SongCard";
 import { cn } from "./ui";
+import { playResultSound } from "@/lib/audio";
+import { truthFor } from "@/game/reducer";
 import { usePreviewAudio } from "./usePreviewAudio";
 
 /** Horizontal drag (px) that commits a guess. */
@@ -76,6 +78,7 @@ export function SwipeDeck({ card, next, playing, onPreviewChange, onGuess }: Swi
       if (committed.current) return;
       committed.current = true;
       pausePreview();
+      playResultSound(dir === truthFor(card));
       if (reduce) {
         onGuess(dir);
         return;
@@ -84,7 +87,7 @@ export function SwipeDeck({ card, next, playing, onPreviewChange, onGuess }: Swi
         onGuess(dir),
       );
     },
-    [onGuess, reduce, x, pausePreview],
+    [onGuess, reduce, x, pausePreview, card],
   );
 
   useEffect(() => {

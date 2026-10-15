@@ -12,7 +12,7 @@ import { HomeScreen } from "./screens/HomeScreen";
 import { RevealScreen, verdictText } from "./screens/RevealScreen";
 import { Footer, Toast } from "./ui";
 import { SwipeDeck } from "./SwipeDeck";
-import { unlockAudio } from "./usePreviewAudio";
+import { unlockAudio } from "@/lib/audio";
 
 interface GameProps {
   artist: Artist;
@@ -49,14 +49,14 @@ export function Game({ artist, deck }: GameProps) {
   const onGuess = useCallback((dir: Direction) => dispatch({ type: "guess", dir }), []);
   const onPreviewChange = useCallback((playing: boolean) => dispatch({ type: "setPreview", playing }), []);
 
-  // Browsers allow sound only after a gesture: unlock previews on the first tap or key press.
+  // Browsers allow sound only after a gesture. Which events count differs (on
+  // phones a touch counts on release), so try on each until audio is running.
   useEffect(() => {
+    const events = ["pointerdown", "pointerup", "touchend", "click", "keydown"] as const;
     const unlock = () => unlockAudio();
-    window.addEventListener("pointerdown", unlock, { once: true, capture: true });
-    window.addEventListener("keydown", unlock, { once: true, capture: true });
+    for (const e of events) window.addEventListener(e, unlock, { capture: true });
     return () => {
-      window.removeEventListener("pointerdown", unlock, { capture: true });
-      window.removeEventListener("keydown", unlock, { capture: true });
+      for (const e of events) window.removeEventListener(e, unlock, { capture: true });
     };
   }, []);
 

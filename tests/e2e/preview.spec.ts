@@ -50,3 +50,28 @@ test("the footer credits Deezer next to the preview", async ({ page }) => {
   await page.goto("/?screen=play&song=0");
   await expect(page.getByRole("link", { name: "Deezer" })).toHaveAttribute("href", "https://www.deezer.com");
 });
+
+test("a guess plays a result sound", async ({ page }) => {
+  await mockPreviews(page, "silent");
+  // Count synthesised notes: two bright notes plus sparkle when right, two low ones when wrong.
+  await page.addInitScript(() => {
+    const Real = window.OscillatorNode;
+    const w = window as unknown as { __notes: number[] };
+    w.__notes = [];
+    window.OscillatorNode = class extends Real {
+      constructor(ctx: BaseAudioContext, opts?: OscillatorOptions) {
+        super(ctx, opts);
+        w.__notes.push(opts?.frequency ?? 0);
+      }
+    };
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /Metallica/ }).click();
+  await expect(page.getByRole("button", { name: "Pause preview" })).toBeVisible();
+
+  // The first sample card ("One", 1,646 vs 1,400) is higher.
+  await page.getByRole("button", { name: "Higher" }).click();
+  await expect(page.getByTestId("verdict")).toContainText("Correct.");
+  const notes = await page.evaluate(() => (window as unknown as { __notes: number[] }).__notes);
+  expect(notes.slice(0, 2).map(Math.round)).toEqual([659, 988]);
+});
