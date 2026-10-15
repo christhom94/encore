@@ -68,3 +68,30 @@ export const ingestRuns = sqliteTable("ingest_runs", {
 export type Artist = typeof artists.$inferSelect;
 export type Song = typeof songs.$inferSelect;
 export type NewSong = typeof songs.$inferInsert;
+
+/**
+ * Background ingest queue. A player searching for an artist we don't have yet
+ * adds a job; the worker (src/ingest/worker.ts) runs it outside any request.
+ */
+export const ingestJobs = sqliteTable(
+  "ingest_jobs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    artistMbid: text("artist_mbid").notNull(),
+    artistName: text("artist_name").notNull(),
+    /** queued | running | done | failed */
+    status: text("status").notNull().default("queued"),
+    /** Machine-readable reason when failed: no_artist, no_setlists, too_few_songs, error */
+    errorCode: text("error_code"),
+    error: text("error"),
+    requestedAt: integer("requested_at", { mode: "timestamp_ms" }).notNull(),
+    startedAt: integer("started_at", { mode: "timestamp_ms" }),
+    finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
+  },
+  (t) => [
+    index("ingest_jobs_status").on(t.status, t.requestedAt),
+    index("ingest_jobs_artist").on(t.artistMbid),
+  ],
+);
+
+export type IngestJob = typeof ingestJobs.$inferSelect;

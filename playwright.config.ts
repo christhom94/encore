@@ -25,8 +25,16 @@ export default defineConfig({
   ],
   // A production build: steadier than the dev server for screenshots.
   webServer: {
-    command: `npm run build && npm run start -- --port ${PORT}`,
-    env: { NEXT_PUBLIC_REVIEW_LINKS: "1" },
+    command: `tsx tests/e2e/seed.ts && npm run build && npm run start -- --port ${PORT}`,
+    env: {
+      NEXT_PUBLIC_REVIEW_LINKS: "1",
+      // A seeded database and no network: no worker, no setlist.fm key.
+      DATABASE_URL: "file:./e2e.db",
+      INGEST_WORKER: "off",
+      SETLISTFM_API_KEY: "",
+      // Songs played 1,000+ times: an 11-card Metallica deck keeps full runs short.
+      MIN_PLAYS: "1000",
+    },
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false,
     timeout: 240_000,

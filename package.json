@@ -16,7 +16,8 @@
     "screens:compare": "tsx scripts/compare-screens.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
-    "ingest": "tsx scripts/ingest.ts"
+    "ingest": "tsx scripts/ingest.ts",
+    "worker": "tsx scripts/worker.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

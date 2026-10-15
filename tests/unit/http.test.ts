@@ -72,3 +72,20 @@ describe("PoliteFetcher", () => {
     expect(await f.getText("https://x/c", { cacheTtlMs: 0 })).toBe("second");
   });
 });
+
+describe("PoliteFetcher and bot protection", () => {
+  it("treats a WAF challenge (202, empty) as an error and does not cache it", async () => {
+    const clock = fakeClock();
+    const { impl, calls } = fakeFetch([
+      { status: 202, body: "", headers: { "x-amzn-waf-action": "challenge" } },
+      { status: 200, body: "<html>real</html>" },
+    ]);
+    const cacheDir = mkdtempSync(join(tmpdir(), "encore-waf-"));
+    const f = new PoliteFetcher({ minIntervalMs: 0, fetchImpl: impl, cacheDir, ...clock, now: Date.now });
+    const err = await f.getText("https://x/stats", { cacheTtlMs: 60_000 }).catch((e) => e);
+    expect(err).toBeInstanceOf(HttpError);
+    expect((err as HttpError).challenged).toBe(true);
+    expect(await f.getText("https://x/stats", { cacheTtlMs: 60_000 })).toBe("<html>real</html>");
+    expect(calls).toHaveLength(2);
+  });
+});

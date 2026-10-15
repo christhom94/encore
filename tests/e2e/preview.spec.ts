@@ -1,6 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mockPreviews } from "./helpers";
 
+// The sample deck plays from /play/sample; tapping Play counts as the first gesture.
+const SAMPLE = "/play/sample";
+
 const progress = (page: Page) =>
   page.getByTestId("preview-progress").evaluate((el) => parseFloat((el as HTMLElement).style.width) || 0);
 const audioPaused = (page: Page) =>
@@ -8,8 +11,7 @@ const audioPaused = (page: Page) =>
 
 test("the preview plays when a card appears, follows the audio and pauses on swipe", async ({ page }) => {
   await mockPreviews(page, "silent");
-  await page.goto("/");
-  await page.getByRole("button", { name: /Metallica/ }).click();
+  await page.goto(SAMPLE);
 
   const pause = page.getByRole("button", { name: "Pause preview" });
   await expect(pause).toBeVisible();
@@ -39,15 +41,14 @@ test("the preview plays when a card appears, follows the audio and pauses on swi
 
 test("a song without a preview keeps the control disabled", async ({ page }) => {
   await mockPreviews(page, "none");
-  await page.goto("/");
-  await page.getByRole("button", { name: /Metallica/ }).click();
+  await page.goto(SAMPLE);
   await expect(page.getByRole("button", { name: "No preview for this song" })).toBeDisabled();
   await expect(page.getByText("No preview", { exact: true })).toBeVisible();
 });
 
 test("the footer credits Deezer next to the preview", async ({ page }) => {
   await mockPreviews(page, "silent");
-  await page.goto("/?screen=play&song=0");
+  await page.goto("/play/sample?screen=play&song=0");
   await expect(page.getByRole("link", { name: "Deezer" })).toHaveAttribute("href", "https://www.deezer.com");
 });
 
@@ -65,8 +66,7 @@ test("a guess plays a result sound", async ({ page }) => {
       }
     };
   });
-  await page.goto("/");
-  await page.getByRole("button", { name: /Metallica/ }).click();
+  await page.goto(SAMPLE);
   await expect(page.getByRole("button", { name: "Pause preview" })).toBeVisible();
 
   // The first sample card ("One", 1,646 vs 1,400) is higher.

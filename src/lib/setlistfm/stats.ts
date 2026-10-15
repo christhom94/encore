@@ -18,6 +18,13 @@ export function statsUrlFor(artistUrl: string): string {
 /** Thrown when the page no longer looks like the one the parser was written for. */
 export class StatsPageError extends Error {}
 
+/** setlist.fm's bot protection refused the request (it wants a browser challenge solved). */
+export class StatsBlockedError extends Error {
+  constructor(readonly url: string) {
+    super(`setlist.fm's bot protection blocked the stats page (${url}). Use the API source instead.`);
+  }
+}
+
 /**
  * Parse a stats page (tests/fixtures/metallica-stats.html is a saved copy).
  * The page lists every song on one page, in table.statsTable, one
@@ -69,6 +76,7 @@ export async function getSongCountsByStats(
     return parseStatsPage(await statsFetcher.getText(url, { cacheTtlMs: STATS_TTL }));
   } catch (err) {
     if (err instanceof HttpError && err.status === 404) return { songs: [], totalSetlists: 0 };
+    if (err instanceof HttpError && err.challenged) throw new StatsBlockedError(url);
     throw err;
   }
 }

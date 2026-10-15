@@ -17,8 +17,10 @@ export class HttpError extends Error {
   constructor(
     readonly status: number,
     readonly url: string,
+    /** Set when a bot-protection layer (e.g. AWS WAF) asked for a browser challenge. */
+    readonly challenged = false,
   ) {
-    super(`HTTP ${status} for ${url}`);
+    super(challenged ? `Blocked by bot protection (HTTP ${status}) for ${url}` : `HTTP ${status} for ${url}`);
   }
 }
 
@@ -80,11 +82,14 @@ export class PoliteFetcher {
       this.last = this.now();
 
       const res = await this.fetchImpl(url, { headers: { "User-Agent": userAgent(), ...headers } });
-      if (res.ok) {
+      // A WAF challenge comes back as 202 with an empty body: never treat it as content.
+      const challenged = !!res.headers.get("x-amzn-waf-action");
+      if (res.status === 200 && !challenged) {
         const body = await res.text();
-        await this.writeCache(url, body);
+        if (body.length > 0) await this.writeCache(url, body);
         return body;
       }
+      if (challenged || (res.ok && res.status !== 200)) throw new HttpError(res.status, url, challenged);
       if ((res.status === 429 || res.status === 503) && attempt < this.maxRetries) {
         const retryAfter = Number(res.headers.get("retry-after"));
         await this.sleep(retryAfter > 0 ? retryAfter * 1000 : this.minInterval * 2 ** (attempt + 1));

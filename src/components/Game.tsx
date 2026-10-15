@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useReducer, useRef, useState, type CSSProperties } from "react";
 import { readBest, writeBest } from "@/game/best";
 import { canContinue, gameReducer, initialState, type GameState } from "@/game/reducer";
@@ -8,7 +9,6 @@ import type { Artist, Card, Direction } from "@/game/types";
 import { themeFor } from "@/lib/color";
 import { Header } from "./Header";
 import { GameOverScreen } from "./screens/GameOverScreen";
-import { HomeScreen } from "./screens/HomeScreen";
 import { RevealScreen, verdictText } from "./screens/RevealScreen";
 import { Footer, Toast } from "./ui";
 import { SwipeDeck } from "./SwipeDeck";
@@ -17,10 +17,17 @@ import { unlockAudio } from "@/lib/audio";
 interface GameProps {
   artist: Artist;
   deck: Card[];
+  /** A freshly shuffled deck for "Play again"; null keeps the same deck. */
+  newDeck?: () => Promise<Card[] | null>;
 }
 
-export function Game({ artist, deck }: GameProps) {
-  const [s, dispatch] = useReducer(gameReducer, deck, (d) => initialState(d));
+/** One run: play, reveal and game over. Starts on the first card. */
+export function Game({ artist, deck, newDeck }: GameProps) {
+  const router = useRouter();
+  const [s, dispatch] = useReducer(gameReducer, deck, (d) => ({
+    ...initialState(d),
+    screen: "play" as const,
+  }));
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -45,7 +52,11 @@ export function Game({ artist, deck }: GameProps) {
   const themed = s.screen === "play" || s.screen === "reveal";
   const theme = themeFor(themed ? card?.accent : null) as unknown as CSSProperties;
 
-  const home = () => dispatch({ type: "home" });
+  const home = () => router.push("/");
+  const playAgain = async () => {
+    const fresh = newDeck ? await newDeck().catch(() => null) : null;
+    dispatch(fresh?.length ? { type: "newDeck", deck: fresh } : { type: "start" });
+  };
   const onGuess = useCallback((dir: Direction) => dispatch({ type: "guess", dir }), []);
   const onPreviewChange = useCallback((playing: boolean) => dispatch({ type: "setPreview", playing }), []);
 
@@ -81,15 +92,6 @@ export function Game({ artist, deck }: GameProps) {
   return (
     <div className="stage">
       <main className="phone" style={theme} data-screen={s.screen}>
-        {s.screen === "home" && (
-          <HomeScreen
-            artist={artist}
-            best={s.best}
-            onStart={() => dispatch({ type: "start" })}
-            onToast={showToast}
-          />
-        )}
-
         {s.screen === "play" && card && (
           <>
             <Header
@@ -132,7 +134,7 @@ export function Game({ artist, deck }: GameProps) {
             streak={s.streak}
             best={s.best}
             won={s.won}
-            onRestart={() => dispatch({ type: "start" })}
+            onRestart={playAgain}
             onShare={share}
             onHome={home}
           />

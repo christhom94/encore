@@ -18,6 +18,7 @@ export interface GameState {
 
 export type GameAction =
   | { type: "start" }
+  | { type: "newDeck"; deck: Card[] }
   | { type: "guess"; dir: Direction }
   | { type: "advance" }
   | { type: "home" }
@@ -45,6 +46,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         won: false,
         playing: true,
       };
+
+    // Play again with a freshly shuffled deck (new lines).
+    case "newDeck":
+      return gameReducer({ ...state, deck: action.deck }, { type: "start" });
 
     case "guess": {
       if (state.screen !== "play") return state;
