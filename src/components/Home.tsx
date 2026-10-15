@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readBest } from "@/game/best";
 import { fmt } from "@/game/stats";
-import type { PopularArtist, SearchResult } from "@/server/game";
+import type { PopularArtist, SearchApiError, SearchResult } from "@/server/game";
 import { HelpIcon, PlayIcon, SearchIcon } from "./icons";
 import { Bento, Tile } from "./Tile";
 import { cn, Eyebrow, Footer, IconButton, Toast } from "./ui";
@@ -217,7 +217,7 @@ function useSearch() {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [apiError, setApiError] = useState(false);
+  const [apiError, setApiError] = useState<SearchApiError | undefined>();
   const query = q.trim();
 
   useEffect(() => {
@@ -227,14 +227,14 @@ function useSearch() {
       setLoading(true);
       fetch(`/api/artists/search?q=${encodeURIComponent(query)}`, { signal: ctrl.signal })
         .then((r) => r.json())
-        .then((body: { results: SearchResult[]; apiError?: boolean }) => {
+        .then((body: { results: SearchResult[]; apiError?: SearchApiError }) => {
           setResults(body.results);
-          setApiError(!!body.apiError);
+          setApiError(body.apiError);
           setLoading(false);
         })
         .catch(() => {
           if (!ctrl.signal.aborted) {
-            setApiError(true);
+            setApiError("unavailable");
             setLoading(false);
           }
         });
@@ -299,14 +299,18 @@ function SearchResults({ state, onOpen }: { state: SearchState; onOpen: (r: Sear
       </ul>
       {!state.loading && state.results.length === 0 && (
         <p className="mt-1 text-[14px] font-semibold text-muted">
-          {state.apiError
-            ? "Search is having a moment. Try again shortly."
-            : `No bands found for “${state.query}”.`}
+          {state.apiError === "not_configured"
+            ? "Search needs a setlist.fm API key: add SETLISTFM_API_KEY to .env.local and restart the server."
+            : state.apiError
+              ? "Search is having a moment. Try again shortly."
+              : `No bands found for “${state.query}”.`}
         </p>
       )}
       {state.apiError && state.results.length > 0 && (
         <p className="mt-2 text-[12px] font-semibold text-muted">
-          Showing bands we already have; setlist.fm search is unavailable.
+          {state.apiError === "not_configured"
+            ? "Showing bands we already have; setlist.fm search needs an API key (SETLISTFM_API_KEY)."
+            : "Showing bands we already have; setlist.fm search is unavailable."}
         </p>
       )}
     </section>

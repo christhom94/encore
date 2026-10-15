@@ -25,7 +25,7 @@ test("search finds artists in our database (setlist.fm is offline in tests)", as
   await page.getByRole("searchbox").fill("metal");
   const results = page.getByTestId("search-results");
   await expect(results.getByRole("button", { name: /Metallica/ })).toContainText("Play");
-  await expect(page.getByText("setlist.fm search is unavailable")).toBeVisible();
+  await expect(page.getByText("setlist.fm search needs an API key")).toBeVisible();
   await results.getByRole("button", { name: /Metallica/ }).click();
   await expect(page.getByTestId("top-card")).toBeVisible();
 });

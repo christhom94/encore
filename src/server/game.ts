@@ -113,7 +113,13 @@ export interface SearchResult {
 }
 
 /** Our database first, then the setlist.fm API (cached, polite). */
-export async function searchAll(db: Db, q: string): Promise<{ results: SearchResult[]; apiError?: boolean }> {
+/** Why setlist.fm search failed: no API key configured, or the API is down/rate limited. */
+export type SearchApiError = "not_configured" | "unavailable";
+
+export async function searchAll(
+  db: Db,
+  q: string,
+): Promise<{ results: SearchResult[]; apiError?: SearchApiError }> {
   const query = q.trim();
   if (query.length < 2) return { results: [] };
 
@@ -134,7 +140,7 @@ export async function searchAll(db: Db, q: string): Promise<{ results: SearchRes
     totalSetlists: a.totalSetlists,
   }));
 
-  let apiError = false;
+  let apiError: SearchApiError | undefined;
   try {
     for (const a of await searchArtists(query)) {
       if (results.length >= 8) break;
@@ -149,8 +155,10 @@ export async function searchAll(db: Db, q: string): Promise<{ results: SearchRes
         totalSetlists: null,
       });
     }
-  } catch {
-    apiError = true; // still return what we have locally
+  } catch (err) {
+    // Still return what we have locally, and say why in the server log.
+    apiError = process.env.SETLISTFM_API_KEY ? "unavailable" : "not_configured";
+    console.warn(`[search] setlist.fm search failed: ${err instanceof Error ? err.message : err}`);
   }
-  return { results, apiError: apiError || undefined };
+  return { results, apiError };
 }
