@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Encore prototype</title>
+<!--
+  ENCORE: playable design prototype (reference only, not production code).
+  Plain HTML + CSS + JS, no build step. Open this file in a browser.
+  Data is a hard-coded Metallica deck using real setlist.fm counts (Oct 2026).
+  The production app should match this look and feel exactly; see /CLAUDE.md and /docs/DESIGN.md.
+-->
+<style>
+@font-face { font-family: 'Anton'; src: url('fonts/anton-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Schibsted Grotesk'; src: url('fonts/schibsted-grotesk-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Schibsted Grotesk'; src: url('fonts/schibsted-grotesk-latin-500-normal.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Schibsted Grotesk'; src: url('fonts/schibsted-grotesk-latin-600-normal.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Schibsted Grotesk'; src: url('fonts/schibsted-grotesk-latin-700-normal.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+
+/* ---------- Design tokens (Headliner palette) ---------- */
+:root {
+  --bg: #E3E1DC;          /* page ground, concrete grey */
+  --paper: #F8F6F2;       /* cards and light tiles */
+  --ink: #1C1C1F;         /* text, borders, hard shadows */
+  --muted: #55555C;       /* secondary text */
+  --higher: #E4572E;      /* Higher, primary accent. DEFAULT: overridden per song by the cover's accent colour */
+  --on-higher: #1C1C1F;   /* text on --higher (ink or paper, whichever contrasts more) */
+  --lower: #2B2B30;       /* Lower, charcoal (paper text on it) */
+  --tile: #ECE9E3;        /* recessed tiles, progress track */
+  --accent-text: #B13E1C; /* red for small text on light grounds (AA) */
+  --border: 2.5px;
+  --r-card: 26px; --r-hero: 24px; --r-tile: 20px; --r-art: 18px; --r-thumb: 12px; --r-pill: 999px;
+  --shadow-hard: 5px 5px 0 var(--ink);
+  --shadow-card: 8px 8px 0 var(--lower);
+  --font-display: 'Anton', Impact, 'Arial Narrow', sans-serif;
+  --font-body: 'Schibsted Grotesk', system-ui, sans-serif;
+  --ease: cubic-bezier(.2,.7,.3,1);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: #CFCCC6; font-family: var(--font-body); color: var(--ink); display: flex; align-items: center; justify-content: center; }
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: inherit; }
+
+.phone { width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--bg); border-radius: 36px; box-shadow: 0 20px 60px rgba(0,0,0,.25); display: flex; flex-direction: column; padding: 52px 16px 22px; }
+@media (max-width: 430px) { body { display: block; } .phone { width: 100%; height: 100dvh; border-radius: 0; box-shadow: none; } }
+
+/* ---------- Type ---------- */
+.display { font-family: var(--font-display); font-weight: 400; text-transform: uppercase; line-height: 1; letter-spacing: .01em; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.muted { color: var(--muted); }
+.accent-text { color: var(--accent-text); }
+.meta { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.footer { margin-top: auto; padding-top: 12px; text-align: center; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+/* ---------- Header ---------- */
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.icon-btn { width: 44px; height: 44px; border-radius: 22px; border: var(--border) solid var(--ink); background: var(--paper); display: flex; align-items: center; justify-content: center; padding: 0; }
+.header-title { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.header-title .display { font-size: 26px; letter-spacing: .02em; }
+.streak { height: 44px; padding: 0 16px; border-radius: 22px; border: var(--border) solid var(--ink); display: flex; align-items: center; gap: 8px; background: var(--lower); color: var(--paper); transition: background .2s; }
+.streak.hot { background: var(--higher); color: var(--on-higher); }
+.streak .display { font-size: 24px; }
+
+/* ---------- Tiles (bento) ---------- */
+.bento { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.span2 { grid-column: span 2; }
+.tile { border: var(--border) solid var(--ink); border-radius: var(--r-tile); background: var(--paper); padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between; min-height: 104px; text-decoration: none; color: var(--ink); }
+.tile.dark { background: var(--lower); color: var(--paper); }
+.tile.red { background: var(--higher); color: var(--on-higher); }
+.tile.recessed { background: var(--tile); }
+.tile.dashed { border-style: dashed; }
+.tile.hero { border-radius: var(--r-hero); box-shadow: var(--shadow-hard); margin-right: 5px; }
+.tile .num { font-family: var(--font-display); font-size: 44px; line-height: 1; }
+.tile .num-row { display: flex; align-items: baseline; gap: 6px; }
+.tile .num-row small { font-size: 11px; font-weight: 600; }
+.photo-tile { position: relative; overflow: hidden; padding: 0; min-height: 116px; background: var(--lower); }
+.photo-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.1); }
+.label-sticker { position: absolute; left: 8px; bottom: 8px; padding: 3px 10px 5px; border-radius: 12px; border: 2px solid var(--ink); background: var(--paper); font-family: var(--font-display); font-size: 20px; line-height: 1.05; text-transform: uppercase; }
+.play-dot { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 14px; background: var(--higher); border: 2px solid var(--ink); display: flex; align-items: center; justify-content: center; }
+.halftone-dark { background-color: var(--lower); background-image: radial-gradient(rgba(248,246,242,.16) 1.4px, transparent 1.6px); background-size: 8px 8px; }
+
+/* ---------- Home ---------- */
+.wordmark { font-family: var(--font-display); font-size: 34px; line-height: 1; letter-spacing: .02em; text-transform: uppercase; }
+.wordmark span, .hero-title span { color: var(--higher); }
+.hero-title { margin: 14px 0 0; font-size: 60px; line-height: .95; }
+.lede { margin: 10px 0 0; font-size: 16px; font-weight: 500; line-height: 1.4; color: var(--muted); }
+.search { margin-top: 16px; height: 56px; border-radius: 28px; background: var(--paper); border: var(--border) solid var(--ink); display: flex; align-items: center; gap: 12px; padding: 0 20px; }
+.search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: 500 16px var(--font-body); color: var(--ink); }
+.search input::placeholder { color: var(--muted); }
+.feature { flex-direction: row; gap: 12px; padding: 14px; min-height: 146px; cursor: pointer; }
+.feature .col { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+.feature img { width: 132px; height: 112px; flex-shrink: 0; border-radius: 16px; border: var(--border) solid var(--ink); object-fit: cover; object-position: 55% 30%; filter: grayscale(1) contrast(1.1); }
+.chip-play { align-self: flex-start; height: 32px; padding: 0 14px; border-radius: 16px; background: var(--ink); color: var(--paper); display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ---------- Play ---------- */
+.stack { position: relative; height: 596px; margin-top: 14px; }
+.card { position: absolute; inset: 0; border-radius: var(--r-card); border: var(--border) solid var(--ink); background: var(--paper); padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.card.top { box-shadow: var(--shadow-card); touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; transform-origin: 50% 110%; transition: transform .3s var(--ease); }
+.card.top.dragging { transition: none; cursor: grabbing; }
+.art { position: relative; height: 300px; flex-shrink: 0; border-radius: var(--r-art); overflow: visible; }
+.art img, .art .ph { width: 100%; height: 300px; object-fit: cover; border-radius: var(--r-art); display: block; pointer-events: none; }
+.art .ph { display: flex; align-items: center; justify-content: center; color: var(--paper); }
+.stamp { position: absolute; top: 28px; border: 3px solid var(--ink); border-radius: 16px; padding: 6px 18px 8px; font-family: var(--font-display); font-size: 40px; line-height: 1; text-transform: uppercase; letter-spacing: .03em; box-shadow: 4px 4px 0 var(--ink); pointer-events: none; opacity: 0; }
+.stamp.hi { left: 14px; transform: rotate(-13deg); background: var(--higher); color: var(--on-higher); }
+.stamp.lo { right: 14px; transform: rotate(13deg); background: var(--lower); color: var(--paper); }
+.song-title { margin: 0; font-size: 38px; white-space: nowrap; }
+.song-title.long { font-size: 30px; }
+.preview { padding: 0 4px; display: flex; align-items: center; gap: 10px; }
+.preview button { width: 40px; height: 40px; flex-shrink: 0; border: 0; border-radius: 20px; background: var(--ink); color: var(--paper); display: flex; align-items: center; justify-content: center; padding: 0; }
+.track { flex: 1; height: 8px; border-radius: 4px; background: var(--tile); position: relative; overflow: hidden; }
+.track i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 4px; background: var(--higher); }
+.track i.run { animation: progress 30s linear forwards; }
+@keyframes progress { to { width: 100%; } }
+.line-box { margin-top: auto; border-radius: var(--r-art); background: var(--tile); padding: 10px 16px 12px; }
+.line-box .row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.line-box .big { font-size: 80px; }
+.line-box .times { font-size: 26px; color: var(--accent-text); }
+.choices { margin-top: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.choice { height: 60px; border: var(--border) solid var(--ink); border-radius: 30px; font-family: var(--font-display); font-size: 24px; text-transform: uppercase; letter-spacing: .03em; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .15s, box-shadow .15s, opacity .15s; }
+.choice.lo { background: var(--lower); color: var(--paper); }
+.choice.hi { background: var(--higher); color: var(--on-higher); }
+.choice.armed { transform: translate(-3px, -3px); box-shadow: 4px 4px 0 var(--ink); }
+.choice.dim { opacity: .35; }
+.hint { margin-top: 12px; text-align: center; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+/* ---------- Reveal ---------- */
+.song-strip { flex-direction: row; align-items: center; gap: 12px; padding: 8px; min-height: 0; justify-content: flex-start; }
+.thumb { width: 56px; height: 56px; flex-shrink: 0; border-radius: var(--r-thumb); object-fit: cover; display: block; }
+.verdict { min-height: 232px; padding: 16px 18px; }
+.verdict.wrong { background: var(--lower); color: var(--paper); box-shadow: 5px 5px 0 var(--higher); }
+.verdict .count { font-family: var(--font-display); font-size: 124px; line-height: 1; }
+.cta { margin-top: 16px; height: 58px; border: 0; border-radius: 29px; background: var(--ink); color: var(--paper); font-family: var(--font-display); font-size: 24px; text-transform: uppercase; letter-spacing: .03em; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+.ghost { height: 50px; border: var(--border) solid var(--ink); border-radius: 25px; background: var(--paper); color: var(--ink); font-weight: 700; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.pair { margin-top: 8px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+
+/* ---------- Game over ---------- */
+.over-hero { min-height: 196px; padding: 16px 20px; box-shadow: 5px 5px 0 var(--higher); }
+.over-hero .streak-num { font-family: var(--font-display); font-size: 132px; line-height: .85; color: var(--higher); }
+.run { margin-top: 10px; display: flex; gap: 8px; }
+.run-item { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.run-tile { width: 52px; height: 52px; position: relative; border-radius: 12px; border: var(--border) solid var(--ink); background-size: 6px 6px; }
+.run-tile img { width: 100%; height: 100%; object-fit: cover; border-radius: 9px; display: block; }
+.run-tile.miss { box-shadow: 3px 3px 0 var(--higher); }
+.badge { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 11px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--ink); background: var(--higher); }
+.badge.x { background: var(--ink); }
+
+.toast { position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity .2s; pointer-events: none; white-space: nowrap; }
+.toast.show { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) { .card.top, .choice, .streak { transition: none; } .track i.run { animation: none; width: 30%; } }
+</style>
+</head>
+<body>
+<main class="phone" id="app" aria-live="polite"></main>
+
+<script>
+// ---------------------------------------------------------------------------
+// Sample data. In production this comes from the database (see docs/DATA.md).
+// count = times played live per setlist.fm artist stats; line = the number shown.
+// ---------------------------------------------------------------------------
+const TOTAL_SETLISTS = 2198;
+const A = {
+  mop: 'assets/master-of-puppets.png',
+  ajfa: 'assets/ajfa.jpg',
+  black: 'assets/black-album.jpg',
+};
+// accent = colour extracted from the cover at ingest time (see extractAccent below and
+// docs/DATA.md). null = no cover or no usable colour, so the default red is used.
+const ACCENT = { mop: '#DA621B', ajfa: '#CFDB94', black: null };
+const DECK = [
+  { song: 'One', album: '...And Justice for All', year: 1988, count: 1646, line: 1400, rank: 5, img: A.ajfa, accent: ACCENT.ajfa },
+  { song: 'Fade to Black', album: 'Ride the Lightning', year: 1984, count: 1286, line: 1500, rank: 9, img: '', accent: null },
+  { song: 'Enter Sandman', album: 'Metallica', year: 1991, count: 1464, line: 1600, rank: 6, img: A.black, accent: ACCENT.black },
+  { song: 'Master of Puppets', album: 'Master of Puppets', year: 1986, count: 1803, line: 1500, rank: 1, img: A.mop, accent: ACCENT.mop },
+  { song: 'Creeping Death', album: 'Ride the Lightning', year: 1984, count: 1683, line: 1200, rank: 2, img: '', accent: null },
+  { song: 'Sad but True', album: 'Metallica', year: 1991, count: 1443, line: 1500, rank: 7, img: A.black, accent: ACCENT.black },
+  { song: 'Nothing Else Matters', album: 'Metallica', year: 1991, count: 1338, line: 1000, rank: 8, img: A.black, accent: ACCENT.black },
+  { song: 'Battery', album: 'Master of Puppets', year: 1986, count: 1018, line: 1250, rank: 11, img: A.mop, accent: ACCENT.mop },
+  { song: 'Harvester of Sorrow', album: '...And Justice for All', year: 1988, count: 873, line: 700, rank: 14, img: A.ajfa, accent: ACCENT.ajfa },
+  { song: 'Whiplash', album: "Kill 'Em All", year: 1983, count: 998, line: 1100, rank: 12, img: '', accent: null },
+];
+
+// ---------------------------------------------------------------------------
+// Album-driven accent colour
+// The Higher button, Higher stamp, progress bar, streak chip and the coloured
+// result tile take the current song's cover colour. Lower stays charcoal.
+// ---------------------------------------------------------------------------
+const DEFAULT_ACCENT = '#E4572E', INK = '#1C1C1F', PAPER = '#F8F6F2', TILE = '#ECE9E3';
+const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const rgbToHex = c => '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase();
+function luminance(hex) {
+  return hexToRgb(hex).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; })
+    .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+}
+const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+function rgbToHsl([r, g, b]) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min, s = l > .5 ? d / (2 - max - min) : d / (max + min);
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h / 6, s, l];
+}
+function hslToRgb([h, s, l]) {
+  if (!s) return [l * 255, l * 255, l * 255];
+  const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  const f = t => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < .5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  return [f(h + 1 / 3) * 255, f(h) * 255, f(h - 1 / 3) * 255];
+}
+// Theme derived from one accent: text colour on it, and a darker shade for small text on light tiles (WCAG AA).
+function themeFor(accent) {
+  const hex = accent || DEFAULT_ACCENT;
+  const on = contrast(hex, INK) >= contrast(hex, PAPER) ? INK : PAPER;
+  let [h, s, l] = rgbToHsl(hexToRgb(hex)), text = hex;
+  while (contrast(text, TILE) < 4.5 && l > 0.05) { l -= 0.02; text = rgbToHex(hslToRgb([h, s, l])); }
+  return { '--higher': hex, '--on-higher': on, '--accent-text': text };
+}
+function applyTheme(accent) {
+  const t = themeFor(accent);
+  Object.entries(t).forEach(([k, v]) => app.style.setProperty(k, v));
+}
+// Reference port of the extraction (production runs this server-side at ingest, see docs/DATA.md).
+// Needs a same-origin or CORS-enabled image, otherwise the canvas is tainted.
+function extractAccent(img) {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, 64, 64);
+  const px = ctx.getImageData(0, 0, 64, 64).data, buckets = {};
+  for (let i = 0; i < px.length; i += 4) {
+    const [h, s, l] = rgbToHsl([px[i], px[i + 1], px[i + 2]]);
+    if (s < .35 || l < .15 || l > .85) continue;                    // ignore greys, near black, near white
+    const k = Math.floor(h * 24) % 24, w = s * (1 - Math.abs(l - .5) * 2); // favour vivid mid tones
+    const b = buckets[k] ||= { w: 0, r: 0, g: 0, b: 0, n: 0 };
+    b.w += w; b.r += px[i] * w; b.g += px[i + 1] * w; b.b += px[i + 2] * w; b.n++;
+  }
+  const best = Object.values(buckets).sort((a, z) => z.w - a.w)[0];
+  if (!best || best.n / (64 * 64) < 0.002) return null;            // too little colour: use the default
+  let [h, s, l] = rgbToHsl([best.r / best.w, best.g / best.w, best.b / best.w]);
+  s = Math.max(s, .5); l = Math.min(Math.max(l, .45), .72);         // keep it bright enough to read ink on it
+  let hex = rgbToHex(hslToRgb([h, s, l]));
+  while (contrast(hex, INK) < 4.5 && l < .8) { l += .01; hex = rgbToHex(hslToRgb([h, s, l])); }
+  return hex;
+}
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+const SWIPE_THRESHOLD = 90; // px of horizontal drag that commits a guess
+let best = 11;
+try { best = Number(localStorage.getItem('encore.best')) || 11; } catch (e) {}
+const S = { screen: 'home', i: 0, streak: 0, history: [], last: null, won: false, playing: true };
+
+const app = document.getElementById('app');
+const fmt = n => Number(n).toLocaleString('en-GB');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const levelFor = n => n < 3 ? ['Crowd', `${3 - n} more for Roadie`] : n < 8 ? ['Roadie', `${8 - n} more for Tour manager`] : n < 12 ? ['Tour manager', `${12 - n} more for Headliner`] : ['Headliner', 'Top of the bill'];
+
+const ICON = {
+  back: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>',
+  close: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  help: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.4M12 17h.01"/></svg>',
+  search: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  play: (s = 11) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>`,
+  pause: '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>',
+  left: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
+  right: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  tick: c => `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`,
+  cross: c => `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+};
+
+const art = (d, cls = '') => d.img
+  ? `<img class="${cls}" src="${d.img}" alt="${esc(d.album)} cover" draggable="false">`
+  : `<div class="ph halftone-dark eyebrow ${cls}" role="img" aria-label="Cover art placeholder">Cover art</div>`;
+const thumb = (d, size = 56) => d.img
+  ? `<img class="thumb" style="width:${size}px;height:${size}px" src="${d.img}" alt="${esc(d.album)} cover">`
+  : `<div class="thumb halftone-dark" style="width:${size}px;height:${size}px;background-size:7px 7px" aria-hidden="true"></div>`;
+const header = (opts = {}) => `
+  <div class="header">
+    <button class="icon-btn" data-act="home" aria-label="${opts.close ? 'Close and go home' : 'Back to home'}">${opts.close ? ICON.close : ICON.back}</button>
+    <div class="header-title">
+      ${opts.close ? '' : `<span class="eyebrow muted">Song ${String(S.i + 1).padStart(2, '0')}</span>`}
+      <span class="display">Metallica</span>
+    </div>
+    ${opts.close ? '<div style="width:44px"></div>' : `<div class="streak ${opts.hot ? 'hot' : ''}"><span class="eyebrow">Streak</span><span class="display">${S.streak}</span></div>`}
+  </div>`;
+const footer = text => `<div class="footer">${text} <a href="https://www.setlist.fm" target="_blank" rel="noopener">setlist.fm</a></div>`;
+
+// ---------------------------------------------------------------------------
+// Screens
+// ---------------------------------------------------------------------------
+function renderHome() {
+  app.innerHTML = `
+    <div class="header">
+      <div class="wordmark">Encore<span>.</span></div>
+      <button class="icon-btn" data-act="help" aria-label="How to play">${ICON.help}</button>
+    </div>
+    <h1 class="display hero-title"><span>Higher</span><br>or lower?</h1>
+    <p class="lede">Guess how many times a band has played each song live.</p>
+    <label class="search">${ICON.search}<span class="vh">Search for a band or artist</span><input type="search" placeholder="Search any band or artist"></label>
+    <div class="eyebrow muted" style="margin-top:20px">Popular now</div>
+    <div class="bento" style="margin-top:10px">
+      <button class="tile red hero feature span2" data-act="start" style="text-align:left">
+        <span class="col">
+          <span class="eyebrow">${fmt(TOTAL_SETLISTS)} setlists</span>
+          <span class="display" style="font-size:42px">Metallica</span>
+          <span class="chip-play">${ICON.play()}Play</span>
+        </span>
+        <img src="assets/metallica-band.jpg" alt="Metallica">
+      </button>
+      <button class="tile photo-tile" data-act="soon" aria-label="Oasis"><img src="assets/oasis.jpg" alt="" style="object-position:50% 22%"><span class="play-dot">${ICON.play(10)}</span><span class="label-sticker">Oasis</span></button>
+      <div class="tile dark" style="min-height:116px"><span class="eyebrow">Best streak</span><span class="display" style="font-size:54px;color:var(--higher)">${best}</span></div>
+      <button class="tile photo-tile" data-act="soon" aria-label="Pearl Jam"><img src="assets/pearl-jam.jpg" alt="" style="object-position:40% 30%"><span class="play-dot">${ICON.play(10)}</span><span class="label-sticker">Pearl Jam</span></button>
+      <button class="tile dashed" data-act="soon" style="min-height:116px;text-align:left"><span class="eyebrow accent-text">Daily encore</span><span style="font-size:14px;font-weight:600;line-height:1.3">Same 10 songs for everyone today</span></button>
+    </div>
+    ${footer('Live counts from')}`;
+}
+
+function renderPlay() {
+  const d = DECK[S.i], nx = DECK[S.i + 1];
+  app.innerHTML = `
+    ${header()}
+    <div class="stack">
+      ${nx ? `<div class="card" aria-hidden="true">
+        <div class="art">${art(nx)}</div>
+        <div style="padding:0 4px;display:flex;flex-direction:column;gap:4px">
+          <span class="eyebrow muted">Up next</span><span class="display" style="font-size:38px">${esc(nx.song)}</span>
+        </div></div>` : ''}
+      <div class="card top" id="card">
+        <div class="art">${art(d)}<div class="stamp hi" id="stHi">Higher</div><div class="stamp lo" id="stLo">Lower</div></div>
+        <div style="padding:0 4px;display:flex;flex-direction:column;gap:4px">
+          <h1 class="display song-title ${d.song.length > 17 ? 'long' : ''}">${esc(d.song)}</h1>
+          <div class="meta">${esc(d.album)} · ${d.year}</div>
+        </div>
+        <div class="preview">
+          <button data-act="toggle" aria-label="${S.playing ? 'Pause preview' : 'Play preview'}">${S.playing ? ICON.pause : ICON.play(14)}</button>
+          <div class="track" aria-hidden="true"><i class="${S.playing ? 'run' : ''}"></i></div>
+          <span style="font-size:12px;font-weight:700">0:30</span>
+        </div>
+        <div class="line-box">
+          <span class="eyebrow muted">Played live more or less than</span>
+          <div class="row"><span class="display big">${fmt(d.line)}</span><span class="display times">Times?</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="choices">
+      <button class="choice lo" id="btnLo" data-act="lower">${ICON.left}Lower</button>
+      <button class="choice hi" id="btnHi" data-act="higher">Higher${ICON.right}</button>
+    </div>
+    <div class="hint">Drag the card or tap a button</div>
+    ${footer('Counts from')}`;
+  bindDrag();
+}
+
+function renderReveal() {
+  const d = DECK[S.i], L = S.last, diff = d.count - d.line;
+  const isLast = S.i + 1 >= DECK.length;
+  const verdict = L.ok ? `Correct. ${L.truth === 'higher' ? 'Higher' : 'Lower'} it is.` : `Nope. It was ${L.truth}.`;
+  app.innerHTML = `
+    ${header({ hot: L.ok })}
+    <div class="bento">
+      <div class="tile song-strip span2">${thumb(d)}
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+          <span class="display" style="font-size:24px;line-height:1.05">${esc(d.song)}</span>
+          <span class="meta" style="font-size:12px">${esc(d.album)} · ${d.year}</span>
+        </div>
+      </div>
+      <div class="tile red hero verdict span2 ${L.ok ? '' : 'wrong'}">
+        <span class="display" style="font-size:26px;line-height:1.1;letter-spacing:.02em">${verdict}</span>
+        <div style="display:flex;flex-direction:column"><span class="count">${fmt(d.count)}</span><span class="eyebrow" style="font-size:13px;margin-top:4px">Times played live</span></div>
+      </div>
+      <div class="tile"><span class="eyebrow muted">Your line</span><span class="num">${fmt(d.line)}</span></div>
+      <div class="tile"><span class="eyebrow muted">${diff >= 0 ? 'Over by' : 'Under by'}</span><span class="num accent-text">${diff >= 0 ? '+' : '−'}${fmt(Math.abs(diff))}</span></div>
+      <div class="tile dark"><span class="eyebrow">Played at</span><div class="num-row"><span class="num">${Math.round(d.count / TOTAL_SETLISTS * 100)}%</span><small>of ${fmt(TOTAL_SETLISTS)} shows</small></div></div>
+      <div class="tile recessed"><span class="eyebrow">All-time rank</span><div class="num-row"><span class="num">#${d.rank}</span><small>most played</small></div></div>
+    </div>
+    <button class="cta" data-act="${L.ok && !isLast ? 'next' : 'over'}">${L.ok && !isLast ? 'Next song' : 'See your run'}${ICON.right}</button>
+    ${footer('Counts from')}`;
+  app.querySelector('.cta').focus();
+}
+
+function renderOver() {
+  const [lvl, lvlNext] = levelFor(S.streak);
+  const lastH = S.history[S.history.length - 1];
+  const miss = lastH && !lastH.ok ? DECK[lastH.i] : null;
+  const run = S.history.slice(-6).map(h => {
+    const d = DECK[h.i];
+    return `<div class="run-item"><div class="run-tile halftone-dark ${h.ok ? '' : 'miss'}" role="img" aria-label="${esc(d.song)}, ${h.ok ? 'correct' : 'wrong'}">
+      ${d.img ? `<img src="${d.img}" alt="">` : ''}
+      <span class="badge ${h.ok ? '' : 'x'}">${h.ok ? ICON.tick('#1C1C1F') : ICON.cross('#F8F6F2')}</span></div>${fmt(d.count)}</div>`;
+  }).join('');
+  app.innerHTML = `
+    ${header({ close: true })}
+    <div class="bento">
+      <div class="tile dark hero over-hero span2">
+        <span class="display" style="font-size:28px;letter-spacing:.02em">${S.won ? 'Setlist cleared.' : 'Game over.'}</span>
+        <div style="display:flex;align-items:flex-end;gap:14px"><span class="streak-num">${S.streak}</span><span class="display" style="font-size:28px;padding-bottom:6px">Song<br>streak</span></div>
+      </div>
+      <div class="tile"><span class="eyebrow muted">Your best</span><span class="display" style="font-size:50px">${best}</span></div>
+      <div class="tile red"><span class="eyebrow">Fan level</span><div style="display:flex;flex-direction:column;gap:2px"><span class="display" style="font-size:30px">${lvl}</span><span style="font-size:12px;font-weight:600">${lvlNext}</span></div></div>
+      ${miss ? `<div class="tile song-strip span2" style="padding:10px">${thumb(miss, 60)}
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+          <span class="eyebrow accent-text">The one that got you</span>
+          <span class="display" style="font-size:26px;line-height:1.05">${esc(miss.song)}</span>
+          <span style="font-size:13px;font-weight:500">You said ${lastH.dir} than ${fmt(miss.line)}. Played ${fmt(miss.count)}.</span>
+        </div></div>` : ''}
+    </div>
+    <div class="eyebrow muted" style="margin-top:16px">Your run</div>
+    <div class="run">${run}</div>
+    <button class="cta" data-act="restart" style="margin-top:18px">Play Metallica again</button>
+    <div class="pair"><button class="ghost" data-act="share">Share streak</button><button class="ghost" data-act="home">New band</button></div>
+    ${footer('Counts from')}
+    <div class="toast" id="toast"></div>`;
+}
+
+function render() {
+  // Album colour on play and reveal; house red everywhere else.
+  applyTheme(S.screen === 'play' || S.screen === 'reveal' ? DECK[S.i].accent : null);
+  ({ home: renderHome, play: renderPlay, reveal: renderReveal, over: renderOver })[S.screen]();
+  if (!document.getElementById('toast')) app.insertAdjacentHTML('beforeend', '<div class="toast" id="toast"></div>');
+}
+
+// ---------------------------------------------------------------------------
+// Game logic
+// ---------------------------------------------------------------------------
+let busy = false;
+function guess(dir) {
+  if (S.screen !== 'play' || busy) return;
+  busy = true;
+  const d = DECK[S.i];
+  const truth = d.count > d.line ? 'higher' : 'lower';
+  const ok = dir === truth;
+  S.history.push({ i: S.i, ok, dir });
+  if (ok) S.streak++;
+  if (S.streak > best) { best = S.streak; try { localStorage.setItem('encore.best', String(best)); } catch (e) {} }
+  S.last = { ok, truth, dir };
+  const card = document.getElementById('card');
+  card.classList.remove('dragging');
+  card.style.transform = `translateX(${dir === 'higher' ? 620 : -620}px) rotate(${dir === 'higher' ? 30 : -30}deg)`;
+  setTimeout(() => { busy = false; S.screen = 'reveal'; render(); }, 300);
+}
+function next() { S.i++; S.screen = 'play'; S.playing = true; render(); }
+function toOver() { S.won = !!(S.last && S.last.ok); S.screen = 'over'; render(); }
+function restart() { Object.assign(S, { screen: 'play', i: 0, streak: 0, history: [], last: null, won: false, playing: true }); render(); }
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1800); }
+
+// Drag-to-swipe with pointer events. Stamps and buttons react to drag distance.
+function bindDrag() {
+  const card = document.getElementById('card');
+  const hi = document.getElementById('stHi'), lo = document.getElementById('stLo');
+  const bHi = document.getElementById('btnHi'), bLo = document.getElementById('btnLo');
+  let startX = 0, dx = 0, dragging = false;
+  const paint = () => {
+    const a = Math.max(0, Math.min(1, dx / SWIPE_THRESHOLD)), b = Math.max(0, Math.min(1, -dx / SWIPE_THRESHOLD));
+    card.style.transform = `translateX(${dx}px) rotate(${dx / 18}deg)`;
+    hi.style.opacity = a; lo.style.opacity = b;
+    bHi.classList.toggle('armed', a >= 1); bLo.classList.toggle('armed', b >= 1);
+    bHi.classList.toggle('dim', b > .3); bLo.classList.toggle('dim', a > .3);
+  };
+  card.addEventListener('pointerdown', e => {
+    if (e.target.closest('button') || busy) return;
+    dragging = true; startX = e.clientX; dx = 0;
+    card.setPointerCapture(e.pointerId); card.classList.add('dragging');
+  });
+  card.addEventListener('pointermove', e => { if (dragging) { dx = e.clientX - startX; paint(); } });
+  const end = () => {
+    if (!dragging) return; dragging = false;
+    if (dx > SWIPE_THRESHOLD) guess('higher');
+    else if (dx < -SWIPE_THRESHOLD) guess('lower');
+    else { card.classList.remove('dragging'); dx = 0; paint(); }
+  };
+  card.addEventListener('pointerup', end);
+  card.addEventListener('pointercancel', end);
+}
+
+app.addEventListener('click', e => {
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if (!act) return;
+  if (act === 'start' || act === 'restart') restart();
+  else if (act === 'home') { S.screen = 'home'; render(); }
+  else if (act === 'higher' || act === 'lower') guess(act);
+  else if (act === 'next') next();
+  else if (act === 'over') toOver();
+  else if (act === 'toggle') { S.playing = !S.playing; render(); }
+  else if (act === 'share') {
+    const text = `I got a ${S.streak} song streak on Encore guessing Metallica's live setlists.`;
+    navigator.clipboard?.writeText(text).then(() => toast('Copied to clipboard'), () => toast(text));
+  }
+  else if (act === 'soon') toast('Only Metallica is wired up in this prototype');
+  else if (act === 'help') toast('Swipe right for higher, left for lower');
+});
+document.addEventListener('keydown', e => {
+  if (S.screen !== 'play') return;
+  if (e.key === 'ArrowRight') guess('higher');
+  if (e.key === 'ArrowLeft') guess('lower');
+});
+
+// Deep links for review: index.html?screen=play | reveal | over (also #play etc.).
+// Add &song=0..9 to the play link to see another card (e.g. 0 = One, green accent).
+(function boot() {
+  const q = new URLSearchParams(location.search);
+  const h = q.get('screen') || location.hash.slice(1);
+  if (h === 'play') { S.screen = 'play'; S.i = Number(q.get('song') ?? 3); S.streak = 4; }
+  if (h === 'reveal') { S.i = 3; S.streak = 5; S.last = { ok: true, truth: 'higher', dir: 'higher' }; S.history = [0, 1, 2, 3].map(i => ({ i, ok: true, dir: 'higher' })); S.screen = 'reveal'; }
+  if (h === 'over') { S.i = 5; S.streak = 5; S.history = [0, 1, 2, 3, 4].map(i => ({ i, ok: true, dir: 'higher' })).concat([{ i: 5, ok: false, dir: 'higher' }]); S.last = { ok: false, truth: 'lower', dir: 'higher' }; S.screen = 'over'; }
+  render();
+})();
+</script>
+</body>
+</html>

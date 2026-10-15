@@ -1,0 +1,11 @@
+# Handover material: never reformat
+CLAUDE.md
+docs/
+design/
+AGENTS.md
+README.md
+package-lock.json
+.next/
+node_modules/
+playwright-report/
+test-results/

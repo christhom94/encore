@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+/* ---------- Design tokens (Headliner palette) ----------
+   Names and values match :root in design/prototype/index.html.
+   --higher, --on-higher and --accent-text are overridden per song on Play and
+   Reveal (album accent theming), so Tailwind utilities point at the variables
+   rather than at fixed colours. */
+:root {
+  --bg: #e3e1dc; /* page ground, concrete grey */
+  --paper: #f8f6f2; /* cards and light tiles */
+  --ink: #1c1c1f; /* text, borders, hard shadows */
+  --muted: #55555c; /* secondary text */
+  --higher: #e4572e; /* Higher, primary accent; overridden per song */
+  --on-higher: #1c1c1f; /* text on --higher */
+  --lower: #2b2b30; /* Lower, charcoal */
+  --tile: #ece9e3; /* recessed tiles, progress track */
+  --accent-text: #b13e1c; /* accent for small text on light grounds (AA) */
+  --border: 2.5px;
+  --r-card: 26px;
+  --r-hero: 24px;
+  --r-tile: 20px;
+  --r-art: 18px;
+  --r-thumb: 12px;
+  --r-pill: 999px;
+  --shadow-hard: 5px 5px 0 var(--ink);
+  --shadow-card: 8px 8px 0 var(--lower);
+  --font-display: var(--font-anton), Impact, "Arial Narrow", sans-serif;
+  --font-body: var(--font-schibsted), system-ui, sans-serif;
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-higher: var(--higher);
+  --color-on-higher: var(--on-higher);
+  --color-lower: var(--lower);
+  --color-tile: var(--tile);
+  --color-accent-text: var(--accent-text);
+
+  --radius-card: var(--r-card);
+  --radius-hero: var(--r-hero);
+  --radius-tile: var(--r-tile);
+  --radius-art: var(--r-art);
+  --radius-thumb: var(--r-thumb);
+  --radius-pill: var(--r-pill);
+
+  --shadow-hard: var(--shadow-hard);
+  --shadow-card: var(--shadow-card);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+
+  --ease-poster: var(--ease);
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+/* ---------- Type helpers (from the prototype) ---------- */
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+@utility eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+@utility border-poster {
+  border: var(--border) solid var(--ink);
+}
+
+@utility halftone-dark {
+  background-color: var(--lower);
+  background-image: radial-gradient(rgba(248, 246, 242, 0.16) 1.4px, transparent 1.6px);
+  background-size: 8px 8px;
+}

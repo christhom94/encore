@@ -1,0 +1,21 @@
+node_modules/
+.next/
+out/
+build/
+coverage/
+playwright-report/
+test-results/
+.env
+.env.local
+.env.*.local
+*.db
+*.db-journal
+.DS_Store
+
+# Added at scaffold (from create-next-app)
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+*.pem
+npm-debug.log*
+/playwright/.cache/

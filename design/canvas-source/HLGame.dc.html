@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Encore playable prototype</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Schibsted+Grotesk:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #E3E1DC; font-family: 'Schibsted Grotesk', sans-serif; color: #1C1C1F; display: flex; flex-direction: column; padding: 52px 16px 22px">
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<a href="HLHome.dc.html" aria-label="Back to home" style="width: 44px; height: 44px; box-sizing: border-box; border-radius: 22px; border: 2.5px solid #1C1C1F; background: #F8F6F2; display: flex; align-items: center; justify-content: center; color: #1C1C1F">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+</a>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 1px">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #55555C">{{songNo}}</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 26px; line-height: 1.05; text-transform: uppercase; letter-spacing: 0.02em">Metallica</span>
+</div>
+<div style="{{streakStyle}}">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase">Streak</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 24px; line-height: 1">{{streak}}</span>
+</div>
+</div>
+
+<sc-if value="{{isPlay}}" hint-placeholder-val="{{true}}">
+<div style="position: relative; height: 596px; margin-top: 14px">
+
+<sc-if value="{{hasNext}}" hint-placeholder-val="{{true}}">
+<div aria-hidden="true" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 26px; border: 2.5px solid #1C1C1F; background: #F8F6F2; padding: 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+<sc-if value="{{nx.hasImg}}" hint-placeholder-val="{{true}}">
+<img src="{{nx.img}}" alt="" draggable="false" style="width: 100%; height: 300px; object-fit: cover; border-radius: 18px; display: block">
+</sc-if>
+<sc-if value="{{nx.noImg}}" hint-placeholder-val="{{false}}">
+<div style="height: 300px; border-radius: 18px; background-color: #2B2B30; background-image: radial-gradient(rgba(248,246,242,.16) 1.4px, transparent 1.6px); background-size: 8px 8px"></div>
+</sc-if>
+<div style="padding: 0 4px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #55555C">Up next</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 38px; line-height: 1; text-transform: uppercase">{{nx.song}}</span>
+</div>
+</div>
+</sc-if>
+
+<div style="{{cardStyle}}" onPointerDown="{{down}}" onPointerMove="{{move}}" onPointerUp="{{up}}" onPointerCancel="{{up}}">
+<div style="position: relative; height: 300px; flex-shrink: 0">
+<sc-if value="{{s.hasImg}}" hint-placeholder-val="{{true}}">
+<img src="{{s.img}}" alt="{{s.alt}}" draggable="false" style="width: 100%; height: 300px; object-fit: cover; border-radius: 18px; display: block; pointer-events: none">
+</sc-if>
+<sc-if value="{{s.noImg}}" hint-placeholder-val="{{false}}">
+<div role="img" aria-label="Cover art placeholder" style="height: 300px; border-radius: 18px; background-color: #2B2B30; background-image: radial-gradient(rgba(248,246,242,.16) 1.4px, transparent 1.6px); background-size: 8px 8px; display: flex; align-items: center; justify-content: center; color: #F8F6F2; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase">Cover art</div>
+</sc-if>
+<div aria-hidden="true" style="{{hiStamp}}">Higher</div>
+<div aria-hidden="true" style="{{loStamp}}">Lower</div>
+</div>
+
+<div style="padding: 0 4px; display: flex; flex-direction: column; gap: 4px">
+<h1 style="{{titleStyle}}">{{s.song}}</h1>
+<div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #55555C">{{s.meta}}</div>
+</div>
+
+<div style="padding: 0 4px; display: flex; align-items: center; gap: 10px">
+<button type="button" aria-label="{{playLabel}}" onClick="{{togglePlay}}" style="width: 40px; height: 40px; flex-shrink: 0; border: 0; border-radius: 20px; background: #1C1C1F; color: #F8F6F2; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer">
+<sc-if value="{{playing}}" hint-placeholder-val="{{true}}">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.5"></rect><rect x="14" y="5" width="4" height="14" rx="1.5"></rect></svg>
+</sc-if>
+<sc-if value="{{paused}}" hint-placeholder-val="{{false}}">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"></path></svg>
+</sc-if>
+</button>
+<div aria-hidden="true" style="flex-grow: 1; height: 8px; border-radius: 4px; background: #ECE9E3; position: relative; overflow: hidden"><div style="{{progressStyle}}"></div></div>
+<span style="font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums">{{playTime}}</span>
+</div>
+
+<div style="margin-top: auto; border-radius: 18px; background: #ECE9E3; padding: 10px 16px 12px; display: flex; flex-direction: column">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #55555C">Played live more or less than</span>
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
+<span style="font-family: 'Anton', sans-serif; font-size: 80px; line-height: 1">{{s.lineText}}</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 26px; line-height: 1; text-transform: uppercase; color: #B13E1C">Times?</span>
+</div>
+</div>
+</div>
+
+</div>
+
+<div style="margin-top: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<button type="button" onClick="{{pickLower}}" style="{{loBtn}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg>Lower</button>
+<button type="button" onClick="{{pickHigher}}" style="{{hiBtn}}">Higher<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+</div>
+<div style="margin-top: 12px; text-align: center; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #55555C">Drag the card, or tap a button</div>
+</sc-if>
+
+<sc-if value="{{isReveal}}" hint-placeholder-val="{{false}}">
+<div style="margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+
+<div style="grid-column: span 2; box-sizing: border-box; border-radius: 20px; border: 2.5px solid #1C1C1F; background: #F8F6F2; padding: 8px; display: flex; align-items: center; gap: 12px">
+<sc-if value="{{s.hasImg}}" hint-placeholder-val="{{true}}">
+<img src="{{s.img}}" alt="{{s.alt}}" style="width: 56px; height: 56px; flex-shrink: 0; border-radius: 12px; object-fit: cover; display: block">
+</sc-if>
+<sc-if value="{{s.noImg}}" hint-placeholder-val="{{false}}">
+<div aria-hidden="true" style="width: 56px; height: 56px; flex-shrink: 0; border-radius: 12px; background-color: #2B2B30; background-image: radial-gradient(rgba(248,246,242,.16) 1.4px, transparent 1.6px); background-size: 7px 7px"></div>
+</sc-if>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-family: 'Anton', sans-serif; font-size: 24px; line-height: 1.05; text-transform: uppercase">{{s.song}}</span>
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #55555C">{{s.meta}}</span>
+</div>
+</div>
+
+<div style="{{verdictStyle}}">
+<span style="font-family: 'Anton', sans-serif; font-size: 26px; line-height: 1.1; text-transform: uppercase; letter-spacing: 0.02em">{{verdictText}}</span>
+<div style="display: flex; flex-direction: column">
+<span style="font-family: 'Anton', sans-serif; font-size: 132px; line-height: 0.92">{{s.countText}}</span>
+<span style="font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 4px">Times played live</span>
+</div>
+</div>
+
+<div style="height: 104px; box-sizing: border-box; border-radius: 20px; border: 2.5px solid #1C1C1F; background: #F8F6F2; padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #55555C">Your line</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 44px; line-height: 1">{{s.lineText}}</span>
+</div>
+
+<div style="height: 104px; box-sizing: border-box; border-radius: 20px; border: 2.5px solid #1C1C1F; background: #F8F6F2; padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #55555C">{{diffLabel}}</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 44px; line-height: 1; color: #B13E1C">{{diffText}}</span>
+</div>
+
+<div style="height: 104px; box-sizing: border-box; border-radius: 20px; border: 2.5px solid #1C1C1F; background: #2B2B30; color: #F8F6F2; padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase">Played at</span>
+<div style="display: flex; align-items: baseline; gap: 6px">
+<span style="font-family: 'Anton', sans-serif; font-size: 44px; line-height: 1">{{s.pct}}</span>
+<span style="font-size: 11px; font-weight: 600">of 2,198 shows</span>
+</div>
+</div>
+
+<div style="height: 104px; box-sizing: border-box; border-radius: 20px; border: 2.5px solid #1C1C1F; background: #ECE9E3; padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase">All-time rank</span>
+<div style="display: flex; align-items: baseline; gap: 6px">
+<span style="font-family: 'Anton', sans-serif; font-size: 44px; line-height: 1">{{s.rankText}}</span>
+<span style="font-size: 11px; font-weight: 600">most played</span>
+</div>
+</div>
+
+</div>
+
+<button type="button" onClick="{{revealAction}}" style="margin-top: 16px; height: 58px; border: 0; border-radius: 29px; background: #1C1C1F; color: #F8F6F2; font-family: 'Anton', sans-serif; font-size: 24px; text-transform: uppercase; letter-spacing: 0.03em; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer">{{revealLabel}}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+</sc-if>
+
+<sc-if value="{{isOver}}" hint-placeholder-val="{{false}}">
+<div style="margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+
+<div style="grid-column: span 2; height: 196px; box-sizing: border-box; margin-right: 5px; border-radius: 24px; border: 2.5px solid #1C1C1F; background: #2B2B30; color: #F8F6F2; box-shadow: 5px 5px 0 #E4572E; padding: 16px 20px; display: flex; flex-direction: column; justify-content: space-between">
+<span style="font-family: 'Anton', sans-serif; font-size: 28px; line-height: 1; text-transform: uppercase; letter-spacing: 0.02em">{{overTitle}}</span>
+<div style="display: flex; align-items: flex-end; gap: 14px">
+<span style="font-family: 'Anton', sans-serif; font-size: 132px; line-height: 0.85; color: #E4572E">{{streak}}</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 28px; line-height: 1; text-transform: uppercase; padding-bottom: 6px">Song<br>streak</span>
+</div>
+</div>
+
+<div style="height: 104px; box-sizing: border-box; border-radius: 20px; border: 2.5px solid #1C1C1F; background: #F8F6F2; padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #55555C">Your best</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 50px; line-height: 1">{{best}}</span>
+</div>
+
+<div style="height: 104px; box-sizing: border-box; border-radius: 20px; border: 2.5px solid #1C1C1F; background: #E4572E; padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase">Fan level</span>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-family: 'Anton', sans-serif; font-size: 30px; line-height: 1; text-transform: uppercase">{{level}}</span>
+<span style="font-size: 12px; font-weight: 600">{{levelNext}}</span>
+</div>
+</div>
+
+<sc-if value="{{hasMiss}}" hint-placeholder-val="{{true}}">
+<div style="grid-column: span 2; box-sizing: border-box; border-radius: 20px; border: 2.5px solid #1C1C1F; background: #F8F6F2; padding: 10px; display: flex; align-items: center; gap: 12px">
+<sc-if value="{{miss.hasImg}}" hint-placeholder-val="{{true}}">
+<img src="{{miss.img}}" alt="{{miss.alt}}" style="width: 60px; height: 60px; flex-shrink: 0; border-radius: 12px; object-fit: cover; display: block">
+</sc-if>
+<sc-if value="{{miss.noImg}}" hint-placeholder-val="{{false}}">
+<div aria-hidden="true" style="width: 60px; height: 60px; flex-shrink: 0; border-radius: 12px; background-color: #2B2B30; background-image: radial-gradient(rgba(248,246,242,.16) 1.4px, transparent 1.6px); background-size: 7px 7px"></div>
+</sc-if>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #B13E1C">The one that got you</span>
+<span style="font-family: 'Anton', sans-serif; font-size: 26px; line-height: 1.05; text-transform: uppercase">{{miss.song}}</span>
+<span style="font-size: 13px; font-weight: 500">{{miss.text}}</span>
+</div>
+</div>
+</sc-if>
+
+</div>
+
+<div style="margin-top: 16px; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #55555C">Your run</div>
+<div style="margin-top: 10px; display: flex; gap: 8px">
+<sc-for list="{{run}}" as="item" hint-placeholder-count="6">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px">
+<div role="img" aria-label="{{item.label}}" style="{{item.tile}}">
+<sc-if value="{{item.hasImg}}" hint-placeholder-val="{{false}}">
+<img src="{{item.img}}" alt="" style="width: 100%; height: 100%; object-fit: cover; border-radius: 9px; display: block">
+</sc-if>
+<span style="{{item.badge}}">
+<sc-if value="{{item.ok}}" hint-placeholder-val="{{true}}">
+<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1C1C1F" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</sc-if>
+<sc-if value="{{item.miss}}" hint-placeholder-val="{{false}}">
+<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#F8F6F2" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</sc-if>
+</span>
+</div>
+<span style="font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums">{{item.count}}</span>
+</div>
+</sc-for>
+</div>
+
+<button type="button" onClick="{{reset}}" style="margin-top: 18px; height: 58px; border: 0; border-radius: 29px; background: #1C1C1F; color: #F8F6F2; font-family: 'Anton', sans-serif; font-size: 24px; text-transform: uppercase; letter-spacing: 0.03em; cursor: pointer">Play Metallica again</button>
+<div style="margin-top: 8px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<button type="button" style="height: 50px; box-sizing: border-box; border: 2.5px solid #1C1C1F; border-radius: 25px; background: #F8F6F2; color: #1C1C1F; font-family: 'Schibsted Grotesk', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase">Share streak</button>
+<a href="HLHome.dc.html" style="height: 50px; box-sizing: border-box; border: 2.5px solid #1C1C1F; border-radius: 25px; background: #F8F6F2; color: #1C1C1F; text-decoration: none; font-family: 'Schibsted Grotesk', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; display: flex; align-items: center; justify-content: center">New band</a>
+</div>
+</sc-if>
+
+<div style="margin-top: auto; text-align: center; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #55555C">Counts from <a href="https://www.setlist.fm" style="color: #1C1C1F">setlist.fm</a></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { i: 0, streak: 0, best: 11, phase: 'play', dx: 0, dragging: false, startX: 0, flying: false, playing: true, history: [], last: null, won: false };
+this.timer = null;
+}
+componentWillUnmount() { if (this.timer) clearTimeout(this.timer); }
+deck() {
+var MOP = '../prototype/assets/master-of-puppets.png';
+var AJFA = '../prototype/assets/ajfa.jpg';
+var BLACK = '../prototype/assets/black-album.jpg';
+return [
+{ song: 'One', album: '...And Justice for All', year: 1988, count: 1646, line: 1400, rank: 5, img: AJFA },
+{ song: 'Fade to Black', album: 'Ride the Lightning', year: 1984, count: 1286, line: 1500, rank: 9, img: '' },
+{ song: 'Enter Sandman', album: 'Metallica', year: 1991, count: 1464, line: 1600, rank: 6, img: BLACK },
+{ song: 'Master of Puppets', album: 'Master of Puppets', year: 1986, count: 1803, line: 1500, rank: 1, img: MOP },
+{ song: 'Creeping Death', album: 'Ride the Lightning', year: 1984, count: 1683, line: 1200, rank: 2, img: '' },
+{ song: 'Sad but True', album: 'Metallica', year: 1991, count: 1443, line: 1500, rank: 7, img: BLACK },
+{ song: 'Nothing Else Matters', album: 'Metallica', year: 1991, count: 1338, line: 1000, rank: 8, img: BLACK },
+{ song: 'Battery', album: 'Master of Puppets', year: 1986, count: 1018, line: 1250, rank: 11, img: MOP },
+{ song: 'Harvester of Sorrow', album: '...And Justice for All', year: 1988, count: 873, line: 700, rank: 14, img: AJFA },
+{ song: 'Whiplash', album: "Kill 'Em All", year: 1983, count: 998, line: 1100, rank: 12, img: '' }
+];
+}
+fmt(n) { return Number(n).toLocaleString('en-GB'); }
+card(d) {
+if (!d) return null;
+return {
+song: d.song, img: d.img, hasImg: !!d.img, noImg: !d.img, alt: d.album + ' cover',
+meta: d.album + ' · ' + d.year,
+lineText: this.fmt(d.line), countText: this.fmt(d.count),
+pct: Math.round(d.count / 2198 * 100) + '%', rankText: '#' + d.rank
+};
+}
+guess(dir) {
+var self = this, st = this.state;
+if (st.phase !== 'play' || st.flying) return;
+var d = this.deck()[st.i];
+var truth = d.count > d.line ? 'higher' : 'lower';
+var ok = dir === truth;
+var streak = ok ? st.streak + 1 : st.streak;
+this.setState({ dx: dir === 'higher' ? 620 : -620, dragging: false, flying: true, history: st.history.concat([{ i: st.i, ok: ok, dir: dir }]), streak: streak, best: Math.max(st.best, streak), last: { ok: ok, truth: truth, dir: dir } });
+this.timer = setTimeout(function () { self.setState({ phase: 'reveal', dx: 0, flying: false }); }, 300);
+}
+renderVals() {
+var self = this, st = this.state, deck = this.deck();
+var d = deck[st.i], nd = deck[st.i + 1];
+var dx = st.dx, hiA = Math.max(0, Math.min(1, dx / 90)), loA = Math.max(0, Math.min(1, -dx / 90));
+var last = st.last || { ok: true, truth: 'higher', dir: 'higher' };
+var isLast = st.i + 1 >= deck.length;
+var diff = d.count - d.line;
+var btnBase = 'height: 60px; box-sizing: border-box; border: 2.5px solid #1C1C1F; border-radius: 30px; font-family: \'Anton\', sans-serif; font-size: 24px; text-transform: uppercase; letter-spacing: 0.03em; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: transform .15s, box-shadow .15s, opacity .15s; ';
+var lift = 'transform: translate(-3px, -3px); box-shadow: 4px 4px 0 #1C1C1F; ';
+var stampBase = 'position: absolute; top: 28px; border: 3px solid #1C1C1F; border-radius: 16px; padding: 6px 18px 8px; font-family: \'Anton\', sans-serif; font-size: 40px; line-height: 1; text-transform: uppercase; letter-spacing: 0.03em; box-shadow: 4px 4px 0 #1C1C1F; pointer-events: none; ';
+var levels = st.streak < 3 ? ['Crowd', (3 - st.streak) + ' more for Roadie'] : st.streak < 8 ? ['Roadie', (8 - st.streak) + ' more for Tour manager'] : st.streak < 12 ? ['Tour manager', (12 - st.streak) + ' more for Headliner'] : ['Headliner', 'Top of the bill'];
+var missEntry = null;
+if (!st.won && st.history.length) {
+var h = st.history[st.history.length - 1];
+if (!h.ok) {
+var md = deck[h.i];
+missEntry = { song: md.song, img: md.img, hasImg: !!md.img, noImg: !md.img, alt: md.album + ' cover', text: 'You said ' + h.dir + ' than ' + this.fmt(md.line) + '. Played ' + this.fmt(md.count) + '.' };
+}
+}
+var run = st.history.slice(-6).map(function (h) {
+var rd = deck[h.i];
+return {
+label: rd.song + (h.ok ? ', correct' : ', wrong'),
+count: self.fmt(rd.count), img: rd.img, hasImg: !!rd.img, ok: h.ok, miss: !h.ok,
+tile: 'width: 52px; height: 52px; box-sizing: border-box; position: relative; border-radius: 12px; border: 2.5px solid #1C1C1F; background-color: #2B2B30; background-image: radial-gradient(rgba(248,246,242,.16) 1.3px, transparent 1.5px); background-size: 6px 6px' + (h.ok ? '' : '; box-shadow: 3px 3px 0 #E4572E'),
+badge: 'position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; display: flex; align-items: center; justify-content: center; border: 2px solid #1C1C1F; background: ' + (h.ok ? '#E4572E' : '#1C1C1F')
+};
+});
+return {
+songNo: 'Song ' + (st.i + 1 < 10 ? '0' : '') + (st.i + 1),
+streak: st.streak, best: st.best,
+streakStyle: 'height: 44px; padding: 0 16px; box-sizing: border-box; border-radius: 22px; border: 2.5px solid #1C1C1F; display: flex; align-items: center; gap: 8px; ' + (st.phase === 'reveal' && last.ok ? 'background: #E4572E; color: #1C1C1F' : 'background: #2B2B30; color: #F8F6F2'),
+isPlay: st.phase === 'play', isReveal: st.phase === 'reveal', isOver: st.phase === 'over',
+s: this.card(d), nx: this.card(nd), hasNext: !!nd,
+cardStyle: 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 26px; border: 2.5px solid #1C1C1F; background: #F8F6F2; padding: 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; box-shadow: 8px 8px 0 #2B2B30; touch-action: none; user-select: none; -webkit-user-select: none; cursor: ' + (st.dragging ? 'grabbing' : 'grab') + '; transform: translateX(' + dx + 'px) rotate(' + (dx / 18) + 'deg); transform-origin: 50% 110%; transition: ' + (st.dragging ? 'none' : 'transform .3s cubic-bezier(.2,.7,.3,1)'),
+hiStamp: stampBase + 'left: 14px; transform: rotate(-13deg); background: #E4572E; color: #1C1C1F; opacity: ' + hiA,
+loStamp: stampBase + 'right: 14px; transform: rotate(13deg); background: #2B2B30; color: #F8F6F2; opacity: ' + loA,
+titleStyle: 'margin: 0; font-family: \'Anton\', sans-serif; font-weight: 400; font-size: ' + (d.song.length > 17 ? 30 : 38) + 'px; line-height: 1; text-transform: uppercase; letter-spacing: 0.01em; white-space: nowrap',
+playing: st.playing, paused: !st.playing, playLabel: st.playing ? 'Pause preview' : 'Play preview', playTime: st.playing ? '0:09' : '0:00',
+progressStyle: 'position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: #E4572E; width: ' + (st.playing ? '30%' : '0%'),
+togglePlay: function () { self.setState({ playing: !self.state.playing }); },
+hiBtn: btnBase + 'background: #E4572E; color: #1C1C1F; ' + (hiA >= 1 ? lift : '') + (loA > 0.3 ? 'opacity: .35' : ''),
+loBtn: btnBase + 'background: #2B2B30; color: #F8F6F2; ' + (loA >= 1 ? lift : '') + (hiA > 0.3 ? 'opacity: .35' : ''),
+pickHigher: function () { self.guess('higher'); },
+pickLower: function () { self.guess('lower'); },
+down: function (e) {
+if (self.state.phase !== 'play' || self.state.flying) return;
+if (e.target && e.target.closest && e.target.closest('button')) return;
+try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+self.setState({ dragging: true, startX: e.clientX, dx: 0 });
+},
+move: function (e) { if (self.state.dragging) self.setState({ dx: e.clientX - self.state.startX }); },
+up: function () {
+if (!self.state.dragging) return;
+var x = self.state.dx;
+if (x > 90) self.guess('higher'); else if (x < -90) self.guess('lower'); else self.setState({ dragging: false, dx: 0 });
+},
+verdictText: last.ok ? 'Correct. ' + (last.truth === 'higher' ? 'Higher' : 'Lower') + ' it is.' : 'Nope. It was ' + last.truth + '.',
+verdictStyle: 'grid-column: span 2; height: 232px; box-sizing: border-box; margin-right: 5px; border-radius: 24px; border: 2.5px solid #1C1C1F; padding: 16px 18px; display: flex; flex-direction: column; justify-content: space-between; ' + (last.ok ? 'background: #E4572E; color: #1C1C1F; box-shadow: 5px 5px 0 #1C1C1F' : 'background: #2B2B30; color: #F8F6F2; box-shadow: 5px 5px 0 #E4572E'),
+diffLabel: diff >= 0 ? 'Over by' : 'Under by',
+diffText: (diff >= 0 ? '+' : '−') + this.fmt(Math.abs(diff)),
+revealLabel: last.ok && !isLast ? 'Next song' : 'See your run',
+revealAction: function () {
+var s2 = self.state;
+if (s2.last && s2.last.ok && s2.i + 1 < deck.length) self.setState({ i: s2.i + 1, phase: 'play', dx: 0, playing: true });
+else self.setState({ phase: 'over', won: !!(s2.last && s2.last.ok) });
+},
+overTitle: st.won ? 'Setlist cleared.' : 'Game over.',
+level: levels[0], levelNext: levels[1],
+hasMiss: !!missEntry, miss: missEntry || { song: '', img: '', hasImg: false, noImg: true, alt: '', text: '' },
+run: run,
+reset: function () { self.setState({ i: 0, streak: 0, phase: 'play', dx: 0, dragging: false, flying: false, history: [], last: null, won: false, playing: true }); }
+};
+}
+}
+</script>
+</body>
+</html>
