@@ -25,8 +25,10 @@ export class HttpError extends Error {
 }
 
 interface PoliteOptions {
-  /** Minimum gap between requests to this host, in ms. */
+  /** Minimum gap between request starts to this host, in ms. */
   minIntervalMs?: number;
+  /** Requests allowed in flight at once (default 1: strictly one at a time). */
+  concurrency?: number;
   /** Cache directory for response bodies; omit to disable caching. */
   cacheDir?: string;
   maxRetries?: number;
@@ -45,8 +47,11 @@ export interface GetOptions {
 const realSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export class PoliteFetcher {
-  private queue: Promise<unknown> = Promise.resolve();
-  private last = 0;
+  private active = 0;
+  private readonly waiting: Array<() => void> = [];
+  /** Earliest time the next request may start. */
+  private nextSlot = 0;
+  private readonly concurrency: number;
   private readonly minInterval: number;
   private readonly fetchImpl: typeof fetch;
   private readonly sleep: (ms: number) => Promise<void>;
@@ -59,27 +64,49 @@ export class PoliteFetcher {
     this.sleep = opts.sleep ?? realSleep;
     this.now = opts.now ?? Date.now;
     this.maxRetries = opts.maxRetries ?? 4;
+    this.concurrency = Math.max(1, opts.concurrency ?? 1);
   }
 
-  /** GET a URL as text, queued behind any request already in flight. */
-  getText(url: string, options: GetOptions = {}): Promise<string> {
-    const run = this.queue.then(() => this.fetchText(url, options));
-    this.queue = run.catch(() => undefined);
-    return run;
+  /**
+   * GET a URL as text. Cached answers return at once; otherwise the request
+   * waits for a free slot (at most `concurrency` in flight) and starts no
+   * sooner than minIntervalMs after the previous one.
+   */
+  async getText(url: string, options: GetOptions = {}): Promise<string> {
+    const cached = await this.readCache(url, options.cacheTtlMs ?? 0);
+    if (cached !== null) return cached;
+    await this.acquire();
+    try {
+      return await this.fetchText(url, options);
+    } finally {
+      this.release();
+    }
+  }
+
+  private async acquire() {
+    if (this.active < this.concurrency) {
+      this.active++;
+      return;
+    }
+    await new Promise<void>((resolve) => this.waiting.push(resolve)); // the slot is handed over
+  }
+
+  private release() {
+    const next = this.waiting.shift();
+    if (next) next();
+    else this.active--;
   }
 
   async getJson<T>(url: string, options: GetOptions = {}): Promise<T> {
     return JSON.parse(await this.getText(url, options)) as T;
   }
 
-  private async fetchText(url: string, { headers = {}, cacheTtlMs = 0 }: GetOptions): Promise<string> {
-    const cached = await this.readCache(url, cacheTtlMs);
-    if (cached !== null) return cached;
-
+  private async fetchText(url: string, { headers = {} }: GetOptions): Promise<string> {
     for (let attempt = 0; ; attempt++) {
-      const wait = this.last + this.minInterval - this.now();
-      if (wait > 0) await this.sleep(wait);
-      this.last = this.now();
+      const now = this.now();
+      const start = Math.max(now, this.nextSlot);
+      this.nextSlot = start + this.minInterval;
+      if (start > now) await this.sleep(start - now);
 
       const res = await this.fetchImpl(url, { headers: { "User-Agent": userAgent(), ...headers } });
       // A WAF challenge comes back as 202 with an empty body: never treat it as content.

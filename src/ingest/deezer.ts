@@ -18,7 +18,7 @@ import {
   type DeezerAlbum,
 } from "@/lib/deezer";
 import { userAgent } from "@/lib/http";
-import { firstReleaseYear } from "@/lib/musicbrainz";
+import { releaseYears } from "@/lib/musicbrainz";
 
 export const MIN_PLAYS = () => Number(process.env.MIN_PLAYS) || 10;
 
@@ -69,17 +69,28 @@ export async function ingestDeezer(db: Db, mbid: string, opts: Options = {}): Pr
     .set({ deezerArtistId: dz.id, pictureUrl: dz.picture_xl ?? null })
     .where(eq(artists.mbid, mbid));
 
-  // 2. The artist's catalogue: every release and its tracks.
+  // Release years from MusicBrainz, fetched alongside the Deezer catalogue.
+  const yearsPromise = releaseYears(mbid);
+
+  // 2. The artist's catalogue: every release and its tracks, several albums at once.
   const catalogue = await artistAlbums(dz.id);
   const byTitle = new Map<string, Candidate[]>();
-  for (const [i, album] of catalogue.entries()) {
-    opts.progress?.(`Deezer catalogue ${i + 1}/${catalogue.length}`);
-    for (const track of await albumTracks(album.id)) {
+  let fetched = 0;
+  const albumTrackLists = await Promise.all(
+    catalogue.map(async (album) => {
+      const tracks = await albumTracks(album.id);
+      opts.progress?.(`Fetching albums ${++fetched}/${catalogue.length}`);
+      return { album, tracks };
+    }),
+  );
+  for (const { album, tracks } of albumTrackLists) {
+    for (const track of tracks) {
       for (const { key, partial } of trackKeys(track)) {
         byTitle.set(key, [...(byTitle.get(key) ?? []), { track, album, partial }]);
       }
     }
   }
+  const years = await yearsPromise;
 
   // 3. Match songs.
   const minPlays = MIN_PLAYS();
@@ -95,32 +106,44 @@ export async function ingestDeezer(db: Db, mbid: string, opts: Options = {}): Pr
     );
   summary.considered = todo.length;
 
-  for (const [i, song] of todo.entries()) {
-    opts.progress?.(`Matching ${i + 1}/${todo.length}`);
-    let best = pickBest(song.displayName, dz.id, byTitle.get(normaliseTitle(song.displayName)) ?? []);
-    if (!best && song.count >= minPlays) {
-      // Fallback: title search, keeping only this artist's recordings.
-      const found = (await searchTrack(song.displayName)).filter((t) => t.artist.id === dz.id && t.album);
-      const candidates: Candidate[] = [];
-      for (const t of found.slice(0, 5)) {
-        const album = catalogue.find((a) => a.id === t.album!.id) ?? (await getAlbum(t.album!.id));
-        candidates.push({ track: t, album });
-      }
-      best = pickBest(song.displayName, dz.id, candidates);
-    }
-    if (!best) {
-      if (song.count >= minPlays) summary.unmatched.push({ name: song.displayName, count: song.count });
-      else summary.unmatchedRare++;
-      continue;
-    }
+  // Each album is added once (cover, accent, year), however many songs share it.
+  const albumsAdded = new Map<number, Promise<void>>();
+  const addAlbum = (album: DeezerAlbum) => {
+    if (!albumsAdded.has(album.id))
+      albumsAdded.set(album.id, ensureAlbum(db, album, catalogue, years, summary));
+    return albumsAdded.get(album.id)!;
+  };
 
-    await ensureAlbum(db, mbid, best.album, catalogue, summary);
-    await db
-      .update(songs)
-      .set({ deezerTrackId: best.track.id, deezerAlbumId: best.album.id })
-      .where(eq(songs.id, song.id));
-    summary.matched++;
-  }
+  let done = 0;
+  await Promise.all(
+    todo.map(async (song) => {
+      let best = pickBest(song.displayName, dz.id, byTitle.get(normaliseTitle(song.displayName)) ?? []);
+      if (!best && song.count >= minPlays) {
+        // Fallback: title search, keeping only this artist's recordings.
+        const found = (await searchTrack(song.displayName)).filter((t) => t.artist.id === dz.id && t.album);
+        const candidates: Candidate[] = [];
+        for (const t of found.slice(0, 5)) {
+          const album = catalogue.find((a) => a.id === t.album!.id) ?? (await getAlbum(t.album!.id));
+          candidates.push({ track: t, album });
+        }
+        best = pickBest(song.displayName, dz.id, candidates);
+      }
+      opts.progress?.(`Matching songs ${++done}/${todo.length}`);
+      if (!best) {
+        if (song.count >= minPlays) summary.unmatched.push({ name: song.displayName, count: song.count });
+        else summary.unmatchedRare++;
+        return;
+      }
+
+      await addAlbum(best.album);
+      await db
+        .update(songs)
+        .set({ deezerTrackId: best.track.id, deezerAlbumId: best.album.id })
+        .where(eq(songs.id, song.id));
+      summary.matched++;
+    }),
+  );
+  summary.unmatched.sort((a, b) => b.count - a.count);
 
   // 4. Record the outcome on the ingest run.
   const matchedTotal = (
@@ -159,9 +182,9 @@ export async function ingestDeezer(db: Db, mbid: string, opts: Options = {}): Pr
 /** Insert the album once, with its original year and accent colour. */
 async function ensureAlbum(
   db: Db,
-  artistMbid: string,
   album: DeezerAlbum,
   catalogue: DeezerAlbum[],
+  mbYears: Map<string, number>,
   summary: DeezerSummary,
 ) {
   const existing = await db.query.albums.findFirst({ where: eq(albums.deezerAlbumId, album.id) });
@@ -177,7 +200,7 @@ async function ensureAlbum(
   }
   const title = cleanAlbumTitle(album.title);
   // Deezer may only carry a remaster; MusicBrainz knows when the album first came out.
-  const years = [originalYear(album, catalogue), await firstReleaseYear(artistMbid, title)].filter(
+  const years = [originalYear(album, catalogue), mbYears.get(normaliseTitle(title))].filter(
     (y): y is number => !!y,
   );
   await db

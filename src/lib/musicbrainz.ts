@@ -2,34 +2,45 @@ import { DAY, PoliteFetcher } from "./http";
 import { normaliseTitle } from "./deezer";
 
 // MusicBrainz, for the original release year of an album. Deezer often only
-// carries remasters (e.g. "...And Justice for All (Remastered)", 2018).
+// carries remasters (e.g. "...And Justice for All (Remastered)", 2018), so we
+// browse the artist's release groups once per ingest.
 // MusicBrainz asks for at most one request per second and an identifying User-Agent.
 
 export const mbFetcher = new PoliteFetcher({ minIntervalMs: 1100, cacheDir: ".cache/musicbrainz" });
 
-interface ReleaseGroupSearch {
-  "release-groups"?: Array<{ title: string; score: number; "first-release-date"?: string }>;
+interface ReleaseGroupBrowse {
+  "release-groups"?: Array<{ title: string; "first-release-date"?: string }>;
+  "release-group-count"?: number;
 }
 
-const phrase = (s: string) => `"${s.replace(/["\\]/g, "\\$&")}"`;
-
-/** Year of the first release of an album by this artist (MusicBrainz artist ID = setlist.fm mbid). */
-export async function firstReleaseYear(artistMbid: string, albumTitle: string): Promise<number | null> {
-  const query = `releasegroup:${phrase(albumTitle)} AND arid:${artistMbid}`;
-  const url = `https://musicbrainz.org/ws/2/release-group?query=${encodeURIComponent(query)}&fmt=json&limit=10`;
+/**
+ * First-release year of every release group by this artist, keyed by
+ * normalised title: one or two requests per artist instead of one per album.
+ */
+export async function releaseYears(artistMbid: string): Promise<Map<string, number>> {
+  const years = new Map<string, number>();
   try {
-    const res = await mbFetcher.getJson<ReleaseGroupSearch>(url, { cacheTtlMs: 30 * DAY });
-    return yearFromReleaseGroups(res, albumTitle);
+    for (let offset = 0, total = 1; offset < total && offset < 500; offset += 100) {
+      const url = `https://musicbrainz.org/ws/2/release-group?artist=${artistMbid}&limit=100&offset=${offset}&fmt=json`;
+      const page = await mbFetcher.getJson<ReleaseGroupBrowse>(url, { cacheTtlMs: 30 * DAY });
+      total = page["release-group-count"] ?? 0;
+      addYears(years, page["release-groups"] ?? []);
+    }
   } catch {
-    return null; // the year is a nicety; never fail an ingest over it
+    // Years are a nicety; fall back to Deezer's dates.
   }
+  return years;
 }
 
-export function yearFromReleaseGroups(res: ReleaseGroupSearch, albumTitle: string): number | null {
-  const want = normaliseTitle(albumTitle);
-  const years = (res["release-groups"] ?? [])
-    .filter((g) => g.score >= 90 && normaliseTitle(g.title) === want)
-    .map((g) => Number(g["first-release-date"]?.slice(0, 4)))
-    .filter((y) => y > 1900);
-  return years.length ? Math.min(...years) : null;
+/** Keep the earliest year per normalised title. */
+export function addYears(
+  years: Map<string, number>,
+  groups: Array<{ title: string; "first-release-date"?: string }>,
+): Map<string, number> {
+  for (const g of groups) {
+    const year = Number(g["first-release-date"]?.slice(0, 4));
+    const key = normaliseTitle(g.title);
+    if (year > 1900 && (!years.has(key) || year < years.get(key)!)) years.set(key, year);
+  }
+  return years;
 }

@@ -80,6 +80,7 @@ export async function requeueStale(db: Db, olderThanMs = 15 * 60 * 1000, now = n
 async function fetchCounts(
   artist: Parameters<typeof getSongCountsByStats>[0],
   log: (msg: string) => void,
+  progress: (msg: string) => void,
 ): Promise<{ counts: SongCounts; source: CountSource }> {
   if (countSource() === "stats") {
     try {
@@ -92,10 +93,10 @@ async function fetchCounts(
     }
   }
   return {
-    counts: await getSongCountsByAggregate(
-      artist,
-      (p, n) => p % 20 === 0 && log(`setlists page ${p} of ${n}`),
-    ),
+    counts: await getSongCountsByAggregate(artist, (p, n) => {
+      progress(`Counting setlists: page ${p} of ${n}`);
+      if (p % 20 === 0) log(`setlists page ${p} of ${n}`);
+    }),
     source: "aggregate",
   };
 }
@@ -107,6 +108,18 @@ export async function runJob(db: Db, job: IngestJob, log: (msg: string) => void 
       .update(ingestJobs)
       .set({ status, errorCode: errorCode ?? null, error: error ?? null, finishedAt: new Date() })
       .where(eq(ingestJobs.id, job.id));
+
+  // What the Tuning up screen shows; written at most once a second.
+  let lastReport = 0;
+  const report = (progress: string, force = false) => {
+    const now = Date.now();
+    if (!force && now - lastReport < 1000) return;
+    lastReport = now;
+    db.update(ingestJobs)
+      .set({ progress })
+      .where(eq(ingestJobs.id, job.id))
+      .catch(() => undefined);
+  };
 
   try {
     const existing = await db.query.artists.findFirst({ where: eq(artists.mbid, job.artistMbid) });
@@ -121,7 +134,8 @@ export async function runJob(db: Db, job: IngestJob, log: (msg: string) => void 
     if (!artist) return await finish("failed", "no_artist", "setlist.fm does not know this artist.");
 
     log(`ingest ${artist.name}: counts`);
-    const { counts, source } = await fetchCounts(artist, (m) => log(`ingest ${artist.name}: ${m}`));
+    report("Counting setlists", true);
+    const { counts, source } = await fetchCounts(artist, (m) => log(`ingest ${artist.name}: ${m}`), report);
     if (counts.songs.length === 0 || counts.totalSetlists === 0)
       return await finish(
         "failed",
@@ -135,7 +149,15 @@ export async function runJob(db: Db, job: IngestJob, log: (msg: string) => void 
       force: true,
     });
     log(`ingest ${artist.name}: ${summary.kept.length} songs, matching on Deezer`);
-    await ingestDeezer(db, artist.mbid, { runId: summary.runId });
+    report(`Found ${summary.kept.length} songs. Finding covers and previews`, true);
+    await ingestDeezer(db, artist.mbid, {
+      runId: summary.runId,
+      progress: (m) => {
+        const [, what, x, y] = m.match(/^(Fetching albums|Matching songs) (\d+)\/(\d+)/) ?? [];
+        if (what === "Fetching albums") report(`Finding covers: album ${x} of ${y}`);
+        else if (what === "Matching songs") report(`Matching songs: ${x} of ${y}`);
+      },
+    });
     await finish("done");
     log(`ingest ${artist.name}: done`);
   } catch (err) {

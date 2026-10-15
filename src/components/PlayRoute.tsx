@@ -80,7 +80,7 @@ function Waiting({
         : state.position > 0
           ? `${state.position} ahead in the queue`
           : "Next up";
-    body = `We're counting every song ${name} has played live. This usually takes under a minute; big touring bands can take a few.`;
+    body = `We're counting every song ${name} has played live. Usually well under a minute.`;
   } else if (state.status === "failed") {
     eyebrow = "No encore";
     title = state.reason === "no_setlists" ? "No setlists yet." : "Couldn't fetch them.";
@@ -131,9 +131,8 @@ function Waiting({
               <h1 className={dark ? "m-0 display text-[56px] text-higher" : "m-0 display text-[48px]"}>
                 {title}
               </h1>
-              <p className="m-0 text-[15px] leading-[1.4] font-medium" role="status">
-                {body}
-              </p>
+              <p className="m-0 text-[15px] leading-[1.4] font-medium">{body}</p>
+              {state.status === "pending" && state.progress && <Progress text={state.progress} />}
             </div>
           </Tile>
         </Bento>
@@ -144,6 +143,22 @@ function Waiting({
         )}
         <Footer text="Live counts from" />
       </main>
+    </div>
+  );
+}
+
+/** "Counting setlists: page 40 of 106" with a bar when the step reports x of y. */
+function Progress({ text }: { text: string }) {
+  const m = text.match(/(\d+) of (\d+)/);
+  const fraction = m ? Math.min(1, Number(m[1]) / Number(m[2])) : null;
+  return (
+    <div className="flex flex-col gap-2" role="status" data-testid="ingest-progress">
+      <span className="eyebrow text-paper">{text}</span>
+      {fraction !== null && (
+        <div className="relative h-2 overflow-hidden rounded-[4px] bg-paper/20" aria-hidden="true">
+          <i className="progress-fill" style={{ width: `${fraction * 100}%` }} />
+        </div>
+      )}
     </div>
   );
 }

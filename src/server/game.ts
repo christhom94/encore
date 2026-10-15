@@ -12,7 +12,14 @@ import { searchArtists } from "@/lib/setlistfm/api";
 
 export type DeckResponse =
   | { status: "ready"; artist: Artist; deck: Card[] }
-  | { status: "pending"; artist: { id: string; name: string }; job: "queued" | "running"; position: number }
+  | {
+      status: "pending";
+      artist: { id: string; name: string };
+      job: "queued" | "running";
+      position: number;
+      /** What the worker is doing now, e.g. "Counting setlists: page 40 of 106". */
+      progress: string | null;
+    }
   | { status: "failed"; artist: { id: string; name: string }; reason: string; message: string }
   | { status: "too_few"; artist: Artist; eligible: number; needed: number; minPlays: number }
   | { status: "unknown" };
@@ -58,6 +65,7 @@ export async function getDeck(
       artist: { id: mbid, name: artist?.name ?? job.artistName },
       job: job.status,
       position: await queuePosition(db, job),
+      progress: job.status === "running" ? job.progress : null,
     };
   }
   if (!artist?.countsUpdatedAt) {

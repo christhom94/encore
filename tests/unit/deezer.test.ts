@@ -11,7 +11,7 @@ import {
   type DeezerAlbum,
   type DeezerTrack,
 } from "@/lib/deezer";
-import { yearFromReleaseGroups } from "@/lib/musicbrainz";
+import { addYears } from "@/lib/musicbrainz";
 
 const METALLICA = 119;
 const album = (id: number, title: string, release_date: string, record_type = "album"): DeezerAlbum => ({
@@ -107,15 +107,14 @@ describe("release year", () => {
     expect(originalYear(RTL_REM, [RTL_REM, RTL_DLX, MOP])).toBe(1984);
   });
 
-  it("reads the first release year from MusicBrainz release groups", () => {
-    const res = {
-      "release-groups": [
-        { title: "…And Justice for All", score: 100, "first-release-date": "1988-08-25" },
-        { title: "…And Justice for All (live)", score: 80, "first-release-date": "1989-01-01" },
-      ],
-    };
-    expect(yearFromReleaseGroups(res, "...And Justice for All")).toBe(1988);
-    expect(yearFromReleaseGroups({}, "Anything")).toBeNull();
+  it("keeps the earliest MusicBrainz year per album title", () => {
+    const years = addYears(new Map(), [
+      { title: "…And Justice for All", "first-release-date": "1988-08-25" },
+      { title: "...And Justice for All", "first-release-date": "2018-11-02" },
+      { title: "Unreleased demo" },
+    ]);
+    expect(years.get(normaliseTitle("...And Justice for All (Remastered)"))).toBe(1988);
+    expect(years.size).toBe(1);
   });
 });
 

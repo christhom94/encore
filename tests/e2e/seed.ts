@@ -17,6 +17,7 @@ export const E2E = {
   pearlJam: "83b9cbe7-9857-49e2-ab8e-b57b01038103",
   tooFew: "00000000-0000-4000-8000-000000000003",
   failed: "00000000-0000-4000-8000-000000000004",
+  running: "00000000-0000-4000-8000-000000000005",
 };
 
 async function main() {
@@ -96,6 +97,15 @@ async function main() {
     error: "No setlists with songs for Silent Band on setlist.fm yet.",
     requestedAt: new Date(),
     finishedAt: new Date(),
+  });
+
+  await db.insert(ingestJobs).values({
+    artistMbid: E2E.running,
+    artistName: "Busy Band",
+    status: "running",
+    progress: "Counting setlists: page 40 of 106",
+    requestedAt: new Date(),
+    startedAt: new Date(),
   });
 
   console.log(`Seeded ${url}`);

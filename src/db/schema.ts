@@ -84,6 +84,8 @@ export const ingestJobs = sqliteTable(
     /** Machine-readable reason when failed: no_artist, no_setlists, too_few_songs, error */
     errorCode: text("error_code"),
     error: text("error"),
+    /** What the worker is doing now, shown on the Tuning up screen. */
+    progress: text("progress"),
     requestedAt: integer("requested_at", { mode: "timestamp_ms" }).notNull(),
     startedAt: integer("started_at", { mode: "timestamp_ms" }),
     finishedAt: integer("finished_at", { mode: "timestamp_ms" }),

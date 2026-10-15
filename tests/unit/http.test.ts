@@ -89,3 +89,23 @@ describe("PoliteFetcher and bot protection", () => {
     expect(calls).toHaveLength(2);
   });
 });
+
+describe("PoliteFetcher concurrency", () => {
+  it("keeps at most `concurrency` requests in flight, starts spaced by minIntervalMs", async () => {
+    let inFlight = 0,
+      peak = 0;
+    const starts: number[] = [];
+    const t0 = Date.now();
+    const impl = (async () => {
+      starts.push(Date.now() - t0);
+      peak = Math.max(peak, ++inFlight);
+      await new Promise((r) => setTimeout(r, 40));
+      inFlight--;
+      return new Response("ok");
+    }) as unknown as typeof fetch;
+    const f = new PoliteFetcher({ minIntervalMs: 10, concurrency: 3, fetchImpl: impl });
+    await Promise.all(Array.from({ length: 8 }, (_, i) => f.getText(`https://x/${i}`)));
+    expect(peak).toBe(3);
+    for (let i = 1; i < starts.length; i++) expect(starts[i] - starts[i - 1]).toBeGreaterThanOrEqual(8);
+  });
+});

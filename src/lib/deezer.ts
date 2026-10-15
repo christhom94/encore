@@ -5,8 +5,12 @@ import { DAY, PoliteFetcher } from "./http";
 
 export const DEEZER_API = "https://api.deezer.com";
 
-/** Deezer allows 50 requests per 5 seconds; stay well under it. */
-export const deezerFetcher = new PoliteFetcher({ minIntervalMs: 150, cacheDir: ".cache/deezer" });
+/** Deezer allows 50 requests per 5 seconds: up to 5 at once, starts 125 ms apart (8/s). */
+export const deezerFetcher = new PoliteFetcher({
+  minIntervalMs: 125,
+  concurrency: 5,
+  cacheDir: ".cache/deezer",
+});
 
 export interface DeezerArtist {
   id: number;

@@ -41,6 +41,15 @@ test("an artist we haven't fetched yet shows Tuning up until the ingest finishes
   await expect(waiting).toContainText("Queued Band");
 });
 
+test("a running ingest shows its progress", async ({ page }) => {
+  await page.goto(`/play/${E2E.running}`);
+  const progress = page.getByTestId("ingest-progress");
+  await expect(progress).toContainText("Counting setlists: page 40 of 106");
+  await expect(progress.locator(".progress-fill")).toHaveAttribute("style", /width: 37\.7/);
+  await expect(page.getByTestId("waiting")).toContainText("Fetching setlists");
+  await page.screenshot({ path: "test-results/screens/08-tuning-up.png" });
+});
+
 test("edge cases explain themselves", async ({ page }) => {
   await page.goto(`/play/${E2E.tooFew}`);
   await expect(page.getByTestId("waiting")).toContainText("Not enough songs.");
